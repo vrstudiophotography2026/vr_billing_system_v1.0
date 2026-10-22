@@ -13,6 +13,7 @@ const { MONGODB_URI, ADMIN_PASSWORD } = process.env;
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin@vr';
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const TOKEN_TTL = '12h';
+const BRANCHES = ['Branch 1', 'Branch 2'];
 
 if (!MONGODB_URI) {
     console.error('Missing MONGODB_URI. Copy .env.example to .env and add your MongoDB connection string.');
@@ -38,6 +39,18 @@ const wrap = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch
 const TIMEZONE = process.env.TIMEZONE || 'Asia/Kolkata';
 const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: TIMEZONE }); // YYYY-MM-DD in studio time
 const formatBillNo = seq => `VR-${new Date().getFullYear()}-${seq}`;
+
+// Accepts YYYY-MM-DD or DD-MM-YYYY and returns a valid YYYY-MM-DD (or null).
+function parseDate(v) {
+    const s = str(v, 10);
+    let y, mo, d, m;
+    if ((m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+    else if ((m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(s))) { d = +m[1]; mo = +m[2]; y = +m[3]; }
+    else return null;
+    const dt = new Date(Date.UTC(y, mo - 1, d));
+    if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+    return `${String(y).padStart(4, '0')}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
 
 function safeEqual(a, b) {
     const ha = crypto.createHash('sha256').update(String(a)).digest();
@@ -76,6 +89,12 @@ const Catalog = mongoose.model('Catalog', new mongoose.Schema({
     variants: [new mongoose.Schema({ size: String, price: { type: Number, min: 0 } }, { _id: false })]
 }, { timestamps: true, toJSON }));
 
+const Passport = mongoose.model('Passport', new mongoose.Schema({
+    name: { type: String, required: true, trim: true },
+    price: { type: Number, required: true, min: 0 },
+    details: { type: String, default: '' }
+}, { timestamps: true, toJSON }));
+
 const Shoot = mongoose.model('Shoot', new mongoose.Schema({
     type: { type: String, enum: ['Indoor', 'Outdoor'], required: true },
     name: { type: String, required: true, trim: true },
@@ -92,13 +111,14 @@ const Event = mongoose.model('Event', new mongoose.Schema({
 
 const Bill = mongoose.model('Bill', new mongoose.Schema({
     billNo: { type: String, required: true, unique: true },
-    date: { type: String, required: true, index: true },
+    date: { type: String, required: true, index: true },      // stored as YYYY-MM-DD, shown as DD-MM-YYYY
+    branch: { type: String, enum: BRANCHES, default: 'Branch 1', index: true },
     billerUsername: String,
     billerEmpId: { type: String, index: true },
     billerName: String,
     client: { name: String, phone: String, address: String },
     items: [new mongoose.Schema({
-        title: String, category: String, details: String,
+        title: String, category: String, details: String, branch: String,
         qty: Number, price: Number
     }, { _id: false })],
     subtotal: Number,
@@ -115,11 +135,13 @@ async function nextSeq(name) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  FIRST-RUN SETUP (no default items or employees are created)        */
+/*  FIRST-RUN SETUP                                                    */
 /* ------------------------------------------------------------------ */
 async function seed() {
     // Bills start from VR-<year>-1001
     await Counter.updateOne({ _id: 'bill' }, { $setOnInsert: { seq: 1000 } }, { upsert: true });
+    // Older bills (before branches existed) belong to Branch 1
+    await Bill.updateMany({ branch: { $exists: false } }, { $set: { branch: 'Branch 1' } });
 }
 
 /* ------------------------------------------------------------------ */
@@ -195,6 +217,8 @@ app.get('/api/auth/me', auth(), (req, res) => {
 /* ------------------------------------------------------------------ */
 /*  EMPLOYEES (admin only)                                             */
 /* ------------------------------------------------------------------ */
+const USERNAME_RX = /^[a-z0-9_.-]{3,30}$/;
+
 app.get('/api/employees', auth(['admin']), wrap(async (_req, res) => {
     res.json(await Employee.find().sort({ createdAt: 1 }));
 }));
@@ -202,7 +226,7 @@ app.get('/api/employees', auth(['admin']), wrap(async (_req, res) => {
 app.post('/api/employees', auth(['admin']), wrap(async (req, res) => {
     const username = str(req.body.username, 30).toLowerCase();
     const fullName = str(req.body.fullName, 60);
-    if (!/^[a-z0-9_.-]{3,30}$/.test(username)) throw httpErr(400, 'Username must be 3 to 30 characters: letters, numbers, _ . or -');
+    if (!USERNAME_RX.test(username)) throw httpErr(400, 'Username must be 3 to 30 characters: letters, numbers, _ . or -');
     if (await Employee.exists({ username })) throw httpErr(409, 'That username is already taken.');
 
     const seq = await nextSeq('employee');
@@ -213,10 +237,17 @@ app.post('/api/employees', auth(['admin']), wrap(async (req, res) => {
     res.status(201).json(emp);
 }));
 
+// Admin can edit name, username and active status
 app.patch('/api/employees/:id', auth(['admin']), wrap(async (req, res) => {
     const update = {};
     if (typeof req.body.active === 'boolean') update.active = req.body.active;
     if (req.body.fullName !== undefined) update.fullName = str(req.body.fullName, 60);
+    if (req.body.username !== undefined) {
+        const username = str(req.body.username, 30).toLowerCase();
+        if (!USERNAME_RX.test(username)) throw httpErr(400, 'Username must be 3 to 30 characters: letters, numbers, _ . or -');
+        if (await Employee.exists({ username, _id: { $ne: req.params.id } })) throw httpErr(409, 'That username is already taken.');
+        update.username = username;
+    }
     const emp = await Employee.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!emp) throw httpErr(404, 'Employee not found.');
     res.json(emp);
@@ -229,15 +260,16 @@ app.delete('/api/employees/:id', auth(['admin']), wrap(async (req, res) => {
 }));
 
 /* ------------------------------------------------------------------ */
-/*  MASTER DATA (frames, products, shoots, events)                     */
+/*  MASTER DATA (frames, products, passport, shoots, events)           */
 /* ------------------------------------------------------------------ */
 app.get('/api/master', auth(), wrap(async (_req, res) => {
-    const [catalog, shoots, events] = await Promise.all([
+    const [catalog, passports, shoots, events] = await Promise.all([
         Catalog.find().sort({ createdAt: 1 }),
+        Passport.find().sort({ createdAt: 1 }),
         Shoot.find().sort({ createdAt: 1 }),
         Event.find().sort({ createdAt: 1 })
     ]);
-    res.json({ catalog, shoots, events });
+    res.json({ catalog, passports, shoots, events });
 }));
 
 // Frames & products: one item with many size/price variants
@@ -257,6 +289,24 @@ app.post('/api/catalog', auth(['admin']), wrap(async (req, res) => {
     if (existing) existing.price = price; else item.variants.push({ size, price });
     await item.save();
     res.status(201).json(item);
+}));
+
+// Edit the frame / product itself (name and category)
+app.put('/api/catalog/:id', auth(['admin']), wrap(async (req, res) => {
+    const item = await Catalog.findById(req.params.id);
+    if (!item) throw httpErr(404, 'Item not found.');
+    const name = str(req.body.name, 120);
+    const category = str(req.body.category, 20);
+    if (!name) throw httpErr(400, 'Name is required.');
+    if (!['Frame', 'Product'].includes(category)) throw httpErr(400, 'Category must be Frame or Product.');
+    const clash = await Catalog.exists({
+        _id: { $ne: item._id }, category, name: new RegExp(`^${escapeRegex(name)}$`, 'i')
+    });
+    if (clash) throw httpErr(409, 'Another item with this name already exists in that category.');
+    item.name = name;
+    item.category = category;
+    await item.save();
+    res.json(item);
 }));
 
 app.put('/api/catalog/:id/variants/:idx', auth(['admin']), wrap(async (req, res) => {
@@ -286,17 +336,16 @@ app.delete('/api/catalog/:id', auth(['admin']), wrap(async (req, res) => {
     res.json({ ok: true });
 }));
 
-// Shoots and events share the same shape: group + name + price + details
+// Passport, shoots and events share one shape: [group] + name + price + details
 function mountMaster(route, Model, groupField, allowedGroups) {
     const clean = body => {
-        const o = {
-            [groupField]: str(body[groupField], 40),
-            name: str(body.name, 120),
-            price: num(body.price),
-            details: str(body.details, 300)
-        };
-        if (allowedGroups && !allowedGroups.includes(o[groupField])) throw httpErr(400, `${groupField} must be one of: ${allowedGroups.join(', ')}`);
-        if (!o[groupField] || !o.name || !(o.price >= 0)) throw httpErr(400, 'Type, name and a valid price are required.');
+        const o = { name: str(body.name, 120), price: num(body.price), details: str(body.details, 300) };
+        if (groupField) {
+            o[groupField] = str(body[groupField], 40);
+            if (allowedGroups && !allowedGroups.includes(o[groupField])) throw httpErr(400, `${groupField} must be one of: ${allowedGroups.join(', ')}`);
+            if (!o[groupField]) throw httpErr(400, 'Type, name and a valid price are required.');
+        }
+        if (!o.name || !(o.price >= 0)) throw httpErr(400, 'Name and a valid price are required.');
         return o;
     };
     app.post(`/api/${route}`, auth(['admin']), wrap(async (req, res) => {
@@ -312,6 +361,7 @@ function mountMaster(route, Model, groupField, allowedGroups) {
         res.json({ ok: true });
     }));
 }
+mountMaster('passports', Passport, null, null);
 mountMaster('shoots', Shoot, 'type', ['Indoor', 'Outdoor']);
 mountMaster('events', Event, 'category', null);
 
@@ -328,12 +378,15 @@ app.post('/api/bills', auth(), wrap(async (req, res) => {
     const client = { name: str(b.clientName, 80), phone: str(b.clientPhone, 20), address: str(b.clientAddress, 200) };
     if (!client.name || !client.phone) throw httpErr(400, 'Client name and mobile number are required.');
 
+    const branch = str(b.branch, 20);
+    if (!BRANCHES.includes(branch)) throw httpErr(400, 'Choose Branch 1 or Branch 2.');
+
     const items = (Array.isArray(b.items) ? b.items : []).slice(0, 100).map(i => ({
-        title: str(i.title, 120), category: str(i.category, 60), details: str(i.details, 300),
+        title: str(i.title, 120), category: str(i.category, 60), details: str(i.details, 300), branch,
         qty: Math.floor(num(i.qty)), price: round2(num(i.price))
     }));
     if (!items.length || items.some(i => !i.title || !(i.qty >= 1 && i.qty <= 1000) || !(i.price >= 0))) {
-        throw httpErr(400, 'The bill has an invalid item. Please check quantities and prices.');
+        throw httpErr(400, 'The bill has an invalid item. Please check names, quantities and prices.');
     }
 
     // Totals are always calculated on the server.
@@ -358,7 +411,8 @@ app.post('/api/bills', auth(), wrap(async (req, res) => {
     const seq = await nextSeq('bill');
     const bill = await Bill.create({
         billNo: formatBillNo(seq),
-        date: /^\d{4}-\d{2}-\d{2}$/.test(b.date || '') ? b.date : todayStr(),
+        date: parseDate(b.date) || todayStr(),
+        branch,
         // Biller comes from the login token, so it cannot be faked from the browser.
         billerUsername: req.user.username,
         billerEmpId: req.user.empId,
@@ -371,13 +425,15 @@ app.post('/api/bills', auth(), wrap(async (req, res) => {
 app.get('/api/bills', auth(), wrap(async (req, res) => {
     const q = {};
     if (req.user.role !== 'admin') q.billerEmpId = req.user.empId;   // employees see only their own bills
-    const { from, to, search } = req.query;
+    const { search, branch } = req.query;
+    const from = parseDate(req.query.from);
+    const to = parseDate(req.query.to);
     if (from || to) {
         q.date = {};
-        if (/^\d{4}-\d{2}-\d{2}$/.test(from || '')) q.date.$gte = from;
-        if (/^\d{4}-\d{2}-\d{2}$/.test(to || '')) q.date.$lte = to;
-        if (!Object.keys(q.date).length) delete q.date;
+        if (from) q.date.$gte = from;
+        if (to) q.date.$lte = to;
     }
+    if (BRANCHES.includes(branch)) q.branch = branch;
     if (search) {
         const rx = new RegExp(escapeRegex(str(search, 60)), 'i');
         q.$or = [{ billNo: rx }, { 'client.name': rx }, { 'client.phone': rx }];
@@ -388,17 +444,29 @@ app.get('/api/bills', auth(), wrap(async (req, res) => {
 
 app.get('/api/stats', auth(['admin']), wrap(async (_req, res) => {
     const group = { _id: null, revenue: { $sum: '$total' }, count: { $sum: 1 }, cash: { $sum: '$cashAmount' }, gpay: { $sum: '$gpayAmount' } };
+    const branchGroup = { _id: { $ifNull: ['$branch', 'Branch 1'] }, revenue: { $sum: '$total' }, count: { $sum: 1 } };
     const [all] = await Bill.aggregate([{ $group: group }]);
     const [today] = await Bill.aggregate([{ $match: { date: todayStr() } }, { $group: group }]);
     const byEmployee = await Bill.aggregate([
         { $group: { _id: '$billerEmpId', name: { $last: '$billerUsername' }, revenue: { $sum: '$total' }, count: { $sum: 1 } } },
         { $sort: { revenue: -1 } }
     ]);
+    const branchAll = await Bill.aggregate([{ $group: branchGroup }]);
+    const branchToday = await Bill.aggregate([{ $match: { date: todayStr() } }, { $group: branchGroup }]);
     const empty = { revenue: 0, count: 0, cash: 0, gpay: 0 };
     res.json({
         all: all || empty,
         today: today || empty,
         byEmployee: byEmployee.map(e => ({ empId: e._id, name: e.name, revenue: e.revenue, count: e.count })),
+        byBranch: BRANCHES.map(name => {
+            const a = branchAll.find(x => x._id === name) || {};
+            const t = branchToday.find(x => x._id === name) || {};
+            return {
+                branch: name,
+                revenue: a.revenue || 0, count: a.count || 0,
+                todayRevenue: t.revenue || 0, todayCount: t.count || 0
+            };
+        }),
         activeEmployees: await Employee.countDocuments({ active: true })
     });
 }));

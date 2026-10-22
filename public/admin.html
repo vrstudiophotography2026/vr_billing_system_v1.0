@@ -71,9 +71,16 @@
             <header class="bg-white px-8 py-4 border-b border-slate-200 flex flex-wrap gap-4 items-center justify-between sticky top-0 z-10">
                 <div>
                     <h1 class="text-xl font-bold text-slate-800">Billing desk</h1>
-                    <p class="text-xs text-slate-500">Frames, products, indoor and outdoor shoots and event coverage</p>
+                    <p class="text-xs text-slate-500">Frames, products, passport photos, indoor and outdoor shoots and event coverage</p>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-3">
+                    <div>
+                        <span class="text-[11px] font-semibold text-slate-500 block mb-1">Branch *</span>
+                        <div class="flex gap-1 p-1 bg-slate-100 rounded-lg">
+                            <button type="button" id="branch-btn-1" onclick="setBranch('Branch 1')" class="px-4 py-1.5 rounded-md text-xs font-bold">Branch 1</button>
+                            <button type="button" id="branch-btn-2" onclick="setBranch('Branch 2')" class="px-4 py-1.5 rounded-md text-xs font-bold">Branch 2</button>
+                        </div>
+                    </div>
                     <div class="bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">
                         <span class="text-[11px] font-semibold text-amber-700 block">Next bill number</span>
                         <input type="text" id="billNoInput" readonly class="bg-transparent font-bold text-sm text-slate-900 w-32 focus:outline-none">
@@ -98,8 +105,12 @@
                             <input type="tel" id="clientPhone" placeholder="e.g. 9876543210" class="w-full border border-slate-300 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                         <div>
-                            <label for="billDate" class="block text-xs font-semibold text-slate-700 mb-1">Bill date *</label>
-                            <input type="date" id="billDate" class="w-full border border-slate-300 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <label for="billDate" class="block text-xs font-semibold text-slate-700 mb-1">Bill date (DD-MM-YYYY) *</label>
+                            <div class="relative">
+                                <input type="text" id="billDate" inputmode="numeric" maxlength="10" placeholder="DD-MM-YYYY" oninput="maskDate(this)" class="w-full border border-slate-300 rounded-lg pl-3.5 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <button type="button" onclick="openPicker('billDate')" aria-label="Pick a date" class="absolute right-2 top-1/2 -translate-y-1/2 text-base">📅</button>
+                                <input type="date" id="billDate_picker" tabindex="-1" onchange="pickerChanged('billDate')" class="absolute inset-0 opacity-0 pointer-events-none">
+                            </div>
                         </div>
                         <div>
                             <label for="clientAddress" class="block text-xs font-semibold text-slate-700 mb-1">Address <span class="text-slate-400 font-normal">(optional)</span></label>
@@ -113,30 +124,72 @@
                     <div class="flex flex-wrap gap-2 mb-5">
                         <button type="button" onclick="setCategory('Frame')" id="cat-btn-Frame" class="cat-pill px-4 py-2 rounded-lg text-xs font-semibold">🖼️ Photo frames</button>
                         <button type="button" onclick="setCategory('Product')" id="cat-btn-Product" class="cat-pill px-4 py-2 rounded-lg text-xs font-semibold">📦 Albums &amp; products</button>
+                        <button type="button" onclick="setCategory('Passport')" id="cat-btn-Passport" class="cat-pill px-4 py-2 rounded-lg text-xs font-semibold">🛂 Passport photos</button>
                         <button type="button" onclick="setCategory('Shoot')" id="cat-btn-Shoot" class="cat-pill px-4 py-2 rounded-lg text-xs font-semibold">📸 Indoor / outdoor shoot</button>
                         <button type="button" onclick="setCategory('Event')" id="cat-btn-Event" class="cat-pill px-4 py-2 rounded-lg text-xs font-semibold">🎉 Event coverage</button>
                     </div>
 
                     <form onsubmit="addItem(event)" class="space-y-4">
-                        <div id="frameProductFields" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div>
-                                <label id="itemSelectLabel" for="itemSelect" class="block text-xs font-semibold text-slate-700 mb-1">Select frame</label>
-                                <select id="itemSelect" onchange="onItemChange()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+                        <!-- Frames / products -->
+                        <div id="frameProductFields" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label id="itemSelectLabel" for="itemSelect" class="block text-xs font-semibold text-slate-700 mb-1">Select frame</label>
+                                    <select id="itemSelect" onchange="onItemChange()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+                                </div>
+                                <div id="variantWrap">
+                                    <label for="variantSelect" class="block text-xs font-semibold text-slate-700 mb-1">Select size</label>
+                                    <select id="variantSelect" onchange="onVariantChange()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+                                </div>
+                                <div>
+                                    <label for="unitPrice" class="block text-xs font-semibold text-slate-700 mb-1">Unit price (₹)</label>
+                                    <input type="number" id="unitPrice" min="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-blue-600 bg-blue-50/50">
+                                </div>
+                                <div>
+                                    <label for="itemQty" class="block text-xs font-semibold text-slate-700 mb-1">Quantity</label>
+                                    <input type="number" id="itemQty" min="1" value="1" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                                </div>
                             </div>
-                            <div>
-                                <label for="variantSelect" class="block text-xs font-semibold text-slate-700 mb-1">Select size</label>
-                                <select id="variantSelect" onchange="onVariantChange()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
-                            </div>
-                            <div>
-                                <label for="unitPrice" class="block text-xs font-semibold text-slate-700 mb-1">Unit price (₹)</label>
-                                <input type="number" id="unitPrice" min="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-blue-600 bg-blue-50/50">
-                            </div>
-                            <div>
-                                <label for="itemQty" class="block text-xs font-semibold text-slate-700 mb-1">Quantity</label>
-                                <input type="number" id="itemQty" min="1" value="1" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                            <div id="customFP" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-dashed border-slate-300">
+                                <div>
+                                    <label for="customName" class="block text-xs font-semibold text-slate-700 mb-1">Item name (type it) *</label>
+                                    <input type="text" id="customName" placeholder="Type the frame / product name" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                </div>
+                                <div>
+                                    <label for="customSize" class="block text-xs font-semibold text-slate-700 mb-1">Size / details</label>
+                                    <input type="text" id="customSize" placeholder="e.g. 10x12 Inch" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                </div>
                             </div>
                         </div>
 
+                        <!-- Passport -->
+                        <div id="passportFields" class="hidden p-5 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label for="passportSelect" class="block text-xs font-semibold text-emerald-900 mb-1">Passport package</label>
+                                    <select id="passportSelect" onchange="onPassportSelect()" class="w-full border border-emerald-300 rounded-lg px-3 py-2.5 text-sm bg-white font-medium"></select>
+                                </div>
+                                <div>
+                                    <label for="passportComment" class="block text-xs font-semibold text-emerald-900 mb-1">Notes</label>
+                                    <input type="text" id="passportComment" placeholder="Copies, background colour..." class="w-full border border-emerald-300 rounded-lg px-3 py-2.5 text-sm bg-white">
+                                </div>
+                                <div>
+                                    <label for="passportAmount" class="block text-xs font-bold text-emerald-900 mb-1">Price (₹) *</label>
+                                    <input type="number" id="passportAmount" min="0" placeholder="Enter amount" class="w-full border-2 border-emerald-400 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 bg-white">
+                                </div>
+                                <div>
+                                    <label for="passportQty" class="block text-xs font-semibold text-emerald-900 mb-1">Quantity</label>
+                                    <input type="number" id="passportQty" min="1" value="1" class="w-full border border-emerald-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                </div>
+                            </div>
+                            <div id="passportCustomWrap" class="hidden">
+                                <label for="passportCustomName" class="block text-xs font-semibold text-emerald-900 mb-1">Package name (type it) *</label>
+                                <input type="text" id="passportCustomName" placeholder="e.g. Passport 6 photos" class="w-full md:w-1/2 border border-emerald-300 rounded-lg px-3 py-2 text-sm bg-white">
+                            </div>
+                            <p id="passportHint" class="text-xs text-emerald-800 italic"></p>
+                        </div>
+
+                        <!-- Shoot -->
                         <div id="shootFields" class="hidden p-5 rounded-xl bg-amber-50/70 border border-amber-200 space-y-4">
                             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div>
@@ -159,9 +212,14 @@
                                     <input type="number" id="shootAmount" min="0" placeholder="Enter amount" class="w-full border-2 border-amber-400 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 bg-white">
                                 </div>
                             </div>
+                            <div id="shootCustomWrap" class="hidden">
+                                <label for="shootCustomName" class="block text-xs font-semibold text-amber-900 mb-1">Shoot name (type it) *</label>
+                                <input type="text" id="shootCustomName" placeholder="e.g. Pre-wedding shoot" class="w-full md:w-1/2 border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white">
+                            </div>
                             <p id="shootHint" class="text-xs text-amber-800 italic"></p>
                         </div>
 
+                        <!-- Event -->
                         <div id="eventFields" class="hidden p-5 rounded-xl bg-purple-50/70 border border-purple-200 space-y-4">
                             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div>
@@ -181,6 +239,10 @@
                                     <input type="number" id="eventAmount" min="0" placeholder="Enter amount" class="w-full border-2 border-purple-400 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 bg-white">
                                 </div>
                             </div>
+                            <div id="eventCustomWrap" class="hidden">
+                                <label for="eventCustomName" class="block text-xs font-semibold text-purple-900 mb-1">Package name (type it) *</label>
+                                <input type="text" id="eventCustomName" placeholder="e.g. Birthday coverage" class="w-full md:w-1/2 border border-purple-300 rounded-lg px-3 py-2 text-sm bg-white">
+                            </div>
                             <p id="eventHint" class="text-xs text-purple-800 italic"></p>
                         </div>
 
@@ -192,7 +254,10 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
-                        <div class="px-6 py-4 border-b border-slate-100 font-bold text-sm text-slate-800">Bill items</div>
+                        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                            <span class="font-bold text-sm text-slate-800">Bill items</span>
+                            <span id="cartBranchTag" class="text-[11px] font-bold px-2.5 py-1 rounded bg-slate-900 text-white"></span>
+                        </div>
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="bg-slate-50 text-slate-500 text-xs">
@@ -234,10 +299,44 @@
         <div id="catalog-tab" class="tab-content">
             <header class="bg-white px-8 py-5 border-b border-slate-200 sticky top-0 z-10">
                 <h1 class="text-xl font-bold text-slate-800">Prices &amp; sizes</h1>
-                <p class="text-xs text-slate-500">Add or edit frames, products, shoots and event packages. Changes show up on every billing desk straight away.</p>
+                <p class="text-xs text-slate-500">Add or edit frames, products, passport photos, shoots and event packages. Changes show up on every billing desk straight away.</p>
             </header>
 
             <div class="p-8 max-w-6xl mx-auto space-y-8">
+
+                <!-- Passport -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="border-b border-slate-100 pb-3 mb-4">
+                        <h2 class="text-sm font-bold text-slate-800">🛂 Passport photos</h2>
+                        <p class="text-xs text-slate-500">Passport packages such as "6 photos" or "12 photos". Employees can still type another package while billing.</p>
+                    </div>
+                    <form id="passportMasterForm" onsubmit="savePassport(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end mb-6 bg-emerald-50/60 p-4 rounded-xl border border-emerald-200">
+                        <div>
+                            <label for="adminPassportName" class="block text-xs font-semibold text-emerald-950 mb-1">Package name *</label>
+                            <input type="text" id="adminPassportName" placeholder="e.g. Passport 8 photos" required class="w-full border border-emerald-300 rounded-lg px-3 py-2 text-sm bg-white">
+                        </div>
+                        <div>
+                            <label for="adminPassportPrice" class="block text-xs font-semibold text-emerald-950 mb-1">Price (₹) *</label>
+                            <input type="number" id="adminPassportPrice" min="0" placeholder="100" required class="w-full border border-emerald-300 rounded-lg px-3 py-2 text-sm bg-white">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="adminPassportDetails" class="block text-xs font-semibold text-emerald-950 mb-1">What's included</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="adminPassportDetails" placeholder="e.g. 8 prints, white background" class="w-full border border-emerald-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-sm whitespace-nowrap">Add passport</button>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead><tr class="bg-slate-50 text-slate-500 text-xs">
+                                <th class="px-4 py-3 border-b">Type</th><th class="px-4 py-3 border-b">Name</th><th class="px-4 py-3 border-b">Included</th>
+                                <th class="px-4 py-3 border-b text-right">Default price</th><th class="px-4 py-3 border-b text-right">Actions</th>
+                            </tr></thead>
+                            <tbody id="passportMasterBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
 
                 <!-- Shoots -->
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
@@ -323,7 +422,7 @@
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                     <div class="border-b border-slate-100 pb-3 mb-4">
                         <h2 class="text-sm font-bold text-slate-800">🖼️ Frames &amp; products</h2>
-                        <p class="text-xs text-slate-500">Saving an existing name with a new size adds that size. Saving an existing size updates its price.</p>
+                        <p class="text-xs text-slate-500">Saving an existing name with a new size adds that size. Saving an existing size updates its price. Use Edit to rename an item or change its category.</p>
                     </div>
                     <form id="catalogForm" onsubmit="saveCatalogItem(event)" class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <div>
@@ -352,8 +451,8 @@
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse text-sm">
                             <thead><tr class="bg-slate-50 text-slate-500 text-xs">
-                                <th class="px-4 py-3 border-b">Category</th><th class="px-4 py-3 border-b">Name</th>
-                                <th class="px-4 py-3 border-b">Sizes &amp; prices (click a size to edit)</th><th class="px-4 py-3 border-b text-right">Delete</th>
+                                <th class="px-4 py-3 border-b">Type</th><th class="px-4 py-3 border-b">Name</th>
+                                <th class="px-4 py-3 border-b">Sizes &amp; prices (click a size to edit)</th><th class="px-4 py-3 border-b text-right">Actions</th>
                             </tr></thead>
                             <tbody id="catalogBody" class="divide-y divide-slate-100"></tbody>
                         </table>
@@ -366,7 +465,7 @@
         <div id="employees-tab" class="tab-content">
             <header class="bg-white px-8 py-5 border-b border-slate-200 sticky top-0 z-10">
                 <h1 class="text-xl font-bold text-slate-800">Employees</h1>
-                <p class="text-xs text-slate-500">Add each employee here. They pick their name on the login page, and their employee ID is printed on every invoice they create.</p>
+                <p class="text-xs text-slate-500">Add and edit employees here. They pick their name on the login page, and their employee ID is printed on every invoice they create.</p>
             </header>
 
             <div class="p-8 max-w-5xl mx-auto space-y-6">
@@ -401,11 +500,11 @@
         <div id="dashboard-tab" class="tab-content">
             <header class="bg-white px-8 py-5 border-b border-slate-200 sticky top-0 z-10">
                 <h1 class="text-xl font-bold text-slate-800">Sales &amp; invoices</h1>
-                <p class="text-xs text-slate-500">Revenue, payment split, employee sales and every bill with reprint.</p>
+                <p class="text-xs text-slate-500">Revenue, branch sales, payment split, employee sales and every bill with reprint.</p>
             </header>
 
             <div class="p-8 max-w-6xl mx-auto space-y-6">
-                <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-blue-600">
                         <p class="text-xs font-semibold text-slate-400">Total revenue</p>
                         <p id="statRevenue" class="text-2xl font-bold text-slate-800 mt-2">₹0</p>
@@ -419,6 +518,10 @@
                         <p class="text-xs font-semibold text-slate-400">Invoices</p>
                         <p id="statBills" class="text-2xl font-bold text-slate-800 mt-2">0</p>
                     </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-purple-500">
+                        <p class="text-xs font-semibold text-slate-400">Active employees</p>
+                        <p id="statEmployees" class="text-2xl font-bold text-slate-800 mt-2">0</p>
+                    </div>
                     <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-slate-400">
                         <p class="text-xs font-semibold text-slate-400">Collected in cash</p>
                         <p id="statCash" class="text-2xl font-bold text-slate-800 mt-2">₹0</p>
@@ -427,9 +530,15 @@
                         <p class="text-xs font-semibold text-slate-400">Collected on GPay</p>
                         <p id="statGpay" class="text-2xl font-bold text-slate-800 mt-2">₹0</p>
                     </div>
-                    <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-purple-500">
-                        <p class="text-xs font-semibold text-slate-400">Active employees</p>
-                        <p id="statEmployees" class="text-2xl font-bold text-slate-800 mt-2">0</p>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-rose-500">
+                        <p class="text-xs font-semibold text-slate-400">Branch 1</p>
+                        <p id="statB1" class="text-2xl font-bold text-slate-800 mt-2">₹0</p>
+                        <p id="statB1Sub" class="text-xs text-slate-400 mt-1"></p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-teal-500">
+                        <p class="text-xs font-semibold text-slate-400">Branch 2</p>
+                        <p id="statB2" class="text-2xl font-bold text-slate-800 mt-2">₹0</p>
+                        <p id="statB2Sub" class="text-xs text-slate-400 mt-1"></p>
                     </div>
                 </div>
 
@@ -450,12 +559,28 @@
                             <input type="search" id="filterSearch" placeholder="Bill no, customer name or phone" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
                         </div>
                         <div>
-                            <label for="filterFrom" class="block text-xs font-semibold text-slate-600 mb-1">From</label>
-                            <input type="date" id="filterFrom" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                            <label for="filterBranch" class="block text-xs font-semibold text-slate-600 mb-1">Branch</label>
+                            <select id="filterBranch" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                <option value="">All branches</option>
+                                <option value="Branch 1">Branch 1</option>
+                                <option value="Branch 2">Branch 2</option>
+                            </select>
                         </div>
                         <div>
-                            <label for="filterTo" class="block text-xs font-semibold text-slate-600 mb-1">To</label>
-                            <input type="date" id="filterTo" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                            <label for="filterFrom" class="block text-xs font-semibold text-slate-600 mb-1">From (DD-MM-YYYY)</label>
+                            <div class="relative">
+                                <input type="text" id="filterFrom" inputmode="numeric" maxlength="10" placeholder="DD-MM-YYYY" oninput="maskDate(this)" class="w-40 border border-slate-300 rounded-lg pl-3 pr-9 py-2 text-sm">
+                                <button type="button" onclick="openPicker('filterFrom')" aria-label="Pick a date" class="absolute right-2 top-1/2 -translate-y-1/2">📅</button>
+                                <input type="date" id="filterFrom_picker" tabindex="-1" onchange="pickerChanged('filterFrom')" class="absolute inset-0 opacity-0 pointer-events-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="filterTo" class="block text-xs font-semibold text-slate-600 mb-1">To (DD-MM-YYYY)</label>
+                            <div class="relative">
+                                <input type="text" id="filterTo" inputmode="numeric" maxlength="10" placeholder="DD-MM-YYYY" oninput="maskDate(this)" class="w-40 border border-slate-300 rounded-lg pl-3 pr-9 py-2 text-sm">
+                                <button type="button" onclick="openPicker('filterTo')" aria-label="Pick a date" class="absolute right-2 top-1/2 -translate-y-1/2">📅</button>
+                                <input type="date" id="filterTo_picker" tabindex="-1" onchange="pickerChanged('filterTo')" class="absolute inset-0 opacity-0 pointer-events-none">
+                            </div>
                         </div>
                         <button onclick="loadBills()" class="bg-slate-900 text-white text-sm font-semibold px-4 py-2 rounded-lg">Apply</button>
                         <button onclick="clearFilters()" class="text-sm text-slate-500 hover:text-slate-800 px-2 py-2">Clear</button>
@@ -463,8 +588,8 @@
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse text-sm">
                             <thead><tr class="bg-slate-50 text-slate-500 text-xs">
-                                <th class="px-6 py-3 border-b">Bill no</th><th class="px-6 py-3 border-b">Date</th><th class="px-6 py-3 border-b">Customer</th>
-                                <th class="px-6 py-3 border-b">Biller (ID)</th><th class="px-6 py-3 border-b">Payment</th>
+                                <th class="px-6 py-3 border-b">Bill no</th><th class="px-6 py-3 border-b">Date</th><th class="px-6 py-3 border-b">Branch</th>
+                                <th class="px-6 py-3 border-b">Customer</th><th class="px-6 py-3 border-b">Biller (ID)</th><th class="px-6 py-3 border-b">Payment</th>
                                 <th class="px-6 py-3 border-b text-right">Total</th><th class="px-6 py-3 border-b text-right">Actions</th>
                             </tr></thead>
                             <tbody id="invoiceBody" class="divide-y divide-slate-100"></tbody>
@@ -487,6 +612,7 @@
                 <div>
                     <span class="text-xs text-slate-400 block">Payable total</span>
                     <span id="modalCustomer" class="text-xs text-amber-400 font-medium"></span>
+                    <span id="modalBranch" class="text-[11px] text-slate-300 block"></span>
                 </div>
                 <span id="modalTotal" class="text-2xl font-extrabold text-amber-400">₹0.00</span>
             </div>
@@ -545,9 +671,9 @@
                     <label id="editNameLabel" for="editItemName" class="block text-xs font-semibold text-slate-700 mb-1">Name *</label>
                     <input type="text" id="editItemName" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
                 </div>
-                <div>
+                <div id="editPriceWrapper">
                     <label for="editItemPrice" class="block text-xs font-semibold text-slate-700 mb-1">Price (₹) *</label>
-                    <input type="number" id="editItemPrice" min="0" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-blue-600">
+                    <input type="number" id="editItemPrice" min="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-blue-600">
                 </div>
                 <div id="editDetailsWrapper">
                     <label for="editItemDetails" class="block text-xs font-semibold text-slate-700 mb-1">What's included</label>
@@ -561,6 +687,32 @@
         </div>
     </div>
 
+    <!-- Edit employee modal -->
+    <div id="editEmpModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-base text-slate-900">Edit employee <span id="editEmpIdLabel" class="font-mono text-xs text-slate-500"></span></h3>
+                <button onclick="closeEmpEdit()" aria-label="Close" class="text-slate-400 hover:text-slate-700 text-xl font-bold">×</button>
+            </div>
+            <form onsubmit="saveEmployeeEdit(event)" class="space-y-4">
+                <input type="hidden" id="editEmpId">
+                <div>
+                    <label for="editEmpName" class="block text-xs font-semibold text-slate-700 mb-1">Full name</label>
+                    <input type="text" id="editEmpName" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label for="editEmpUsername" class="block text-xs font-semibold text-slate-700 mb-1">Username *</label>
+                    <input type="text" id="editEmpUsername" required autocomplete="off" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                    <p class="text-[11px] text-slate-400 mt-1">Past bills keep the old name. If this employee is logged in, they should log in again.</p>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeEmpEdit()" class="px-4 py-2 rounded-lg border text-xs font-semibold text-slate-600">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-lg bg-blue-600 text-white text-xs font-bold">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Printable invoice -->
     <div id="designer-pdf-invoice" class="hidden bg-white text-slate-900 p-8 max-w-3xl mx-auto rounded-none">
         <div class="border-b-2 border-slate-900 pb-5 flex justify-between items-start">
@@ -568,7 +720,7 @@
                 <div class="w-10 h-10 rounded-lg bg-slate-900 text-amber-400 flex items-center justify-center font-extrabold text-lg">VR</div>
                 <div>
                     <h1 class="font-serif-studio text-2xl font-bold tracking-wide text-slate-900">VR PHOTOGRAPHY STUDIO</h1>
-                    <p class="text-xs text-slate-600 font-medium">Custom frames, indoor and outdoor shoots, wedding and event coverage</p>
+                    <p class="text-xs text-slate-600 font-medium">Custom frames, passport photos, indoor and outdoor shoots, wedding and event coverage</p>
                 </div>
             </div>
             <div class="text-right">
@@ -582,7 +734,7 @@
                 <p class="text-[10px] font-bold text-slate-400">Studio representative</p>
                 <p class="font-bold text-slate-800">Biller name: <span id="pdfBillerName" class="font-normal"></span></p>
                 <p class="font-bold text-slate-800">Employee ID: <span id="pdfEmployeeId" class="font-normal"></span></p>
-                <p class="font-bold text-slate-800">Studio: <span class="font-normal">VR Photography Main Studio</span></p>
+                <p class="font-bold text-slate-800">Branch: <span id="pdfBranch" class="font-normal"></span></p>
             </div>
             <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-1">
                 <p class="text-[10px] font-bold text-slate-400">Billed to</p>
@@ -619,12 +771,42 @@
 
     <script>
         /* ---------- helpers ---------- */
+        const ADMIN_PAGE = true;                // admin can change prices while billing
+        const CUSTOM = '__custom__';
+        const BRANCHES = ['Branch 1', 'Branch 2'];
         const TOKEN = sessionStorage.getItem('vr_token');
         const $ = id => document.getElementById(id);
         const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         const fmt = n => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const fmt0 = n => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
         const todayLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        const customOpt = `<option value="${CUSTOM}">Other (type manually)</option>`;
+
+        /* ---------- dates: always shown as DD-MM-YYYY ---------- */
+        const fmtDate = iso => /^\d{4}-\d{2}-\d{2}/.test(iso || '') ? iso.slice(0, 10).split('-').reverse().join('-') : (iso || '');
+        function parseDMY(s) {
+            const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(String(s || '').trim());
+            if (!m) return null;
+            const d = +m[1], mo = +m[2], y = +m[3];
+            const dt = new Date(Date.UTC(y, mo - 1, d));
+            if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+            return `${m[3]}-${m[2]}-${m[1]}`;
+        }
+        function maskDate(el) {
+            const d = el.value.replace(/\D/g, '').slice(0, 8);
+            el.value = d.length > 4 ? `${d.slice(0, 2)}-${d.slice(2, 4)}-${d.slice(4)}`
+                : d.length > 2 ? `${d.slice(0, 2)}-${d.slice(2)}` : d;
+        }
+        function openPicker(id) {
+            const p = $(id + '_picker');
+            p.value = parseDMY($(id).value) || todayLocal();
+            if (p.showPicker) { try { p.showPicker(); return; } catch (e) {} }
+            p.click();
+        }
+        function pickerChanged(id) {
+            const p = $(id + '_picker');
+            if (p.value) $(id).value = fmtDate(p.value);
+        }
 
         async function api(path, opts = {}) {
             const res = await fetch('/api' + path, {
@@ -655,8 +837,8 @@
         }
 
         /* ---------- state ---------- */
-        let me = null, master = { catalog: [], shoots: [], events: [] };
-        let category = 'Frame', cart = [], payMode = 'Cash', lastBill = null, dashBills = [];
+        let me = null, master = { catalog: [], passports: [], shoots: [], events: [] };
+        let category = 'Frame', cart = [], payMode = 'Cash', lastBill = null, dashBills = [], employeesCache = [], branch = 'Branch 1';
 
         window.onload = async () => {
             if (!TOKEN) { window.location.href = 'index.html'; return; }
@@ -666,7 +848,9 @@
                 master = await api('/master');
             } catch (e) { return; }
             $('billerLabel').textContent = `${me.username} (${me.empId})`;
-            $('billDate').value = todayLocal();
+            $('billDate').value = fmtDate(todayLocal());
+            try { const b = localStorage.getItem('vr_branch'); if (BRANCHES.includes(b)) branch = b; } catch (e) {}
+            setBranch(branch);
             setupTabs();
             renderMaster();
             setCategory('Frame');
@@ -698,8 +882,23 @@
         }
 
         /* =====================================================
+           BRANCH
+        ===================================================== */
+        function setBranch(b) {
+            branch = b;
+            try { localStorage.setItem('vr_branch', b); } catch (e) {}
+            BRANCHES.forEach((name, i) => {
+                $('branch-btn-' + (i + 1)).className = 'px-4 py-1.5 rounded-md text-xs font-bold ' +
+                    (name === b ? 'bg-slate-900 text-white shadow' : 'text-slate-600 hover:bg-slate-200');
+            });
+            $('cartBranchTag').textContent = b;
+        }
+
+        /* =====================================================
            BILLING
         ===================================================== */
+        const isCustom = id => $(id).value === CUSTOM;
+
         function setCategory(cat) {
             category = cat;
             document.querySelectorAll('.cat-pill').forEach(b => {
@@ -708,19 +907,25 @@
             $('cat-btn-' + cat).className = 'cat-pill px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-sm';
             const isFP = cat === 'Frame' || cat === 'Product';
             $('frameProductFields').classList.toggle('hidden', !isFP);
+            $('passportFields').classList.toggle('hidden', cat !== 'Passport');
             $('shootFields').classList.toggle('hidden', cat !== 'Shoot');
             $('eventFields').classList.toggle('hidden', cat !== 'Event');
             if (isFP) {
                 $('itemSelectLabel').textContent = cat === 'Frame' ? 'Select frame' : 'Select product';
                 const items = master.catalog.filter(i => i.category === cat);
-                $('itemSelect').innerHTML = items.length
-                    ? items.map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('')
-                    : '<option value="">No items yet. Add some in Prices &amp; sizes.</option>';
+                $('itemSelect').innerHTML = items.map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('') + customOpt;
                 onItemChange();
-            } else if (cat === 'Shoot') populateShoots();
+            } else if (cat === 'Passport') populatePassports();
+            else if (cat === 'Shoot') populateShoots();
             else populateEvents();
         }
+
+        // Frames and products
         function onItemChange() {
+            const custom = isCustom('itemSelect');
+            $('variantWrap').classList.toggle('hidden', custom);
+            $('customFP').classList.toggle('hidden', !custom);
+            if (custom) { $('unitPrice').value = ''; return; }
             const item = master.catalog.find(i => i.id === $('itemSelect').value);
             $('variantSelect').innerHTML = item
                 ? item.variants.map((v, idx) => `<option value="${idx}">${esc(v.size)} — ₹${v.price}</option>`).join('') : '';
@@ -731,22 +936,38 @@
             const v = item?.variants[parseInt($('variantSelect').value, 10)];
             $('unitPrice').value = v ? v.price : '';
         }
+
+        // Passport
+        function populatePassports() {
+            $('passportSelect').innerHTML = master.passports.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('') + customOpt;
+            onPassportSelect();
+        }
+        function onPassportSelect() {
+            const custom = isCustom('passportSelect');
+            $('passportCustomWrap').classList.toggle('hidden', !custom);
+            const p = master.passports.find(x => x.id === $('passportSelect').value);
+            if (custom || !p) { $('passportAmount').value = ''; $('passportHint').textContent = ''; return; }
+            $('passportAmount').value = p.price;
+            $('passportHint').textContent = p.details ? `Includes: ${p.details}` : '';
+        }
+
+        // Shoots
         function populateShoots() {
             const type = $('shootType').value;
             const list = master.shoots.filter(s => s.type === type);
-            $('shootName').innerHTML = list.length
-                ? list.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')
-                : `<option value="">Custom ${type} shoot</option>`;
-            if (!list.length) { $('shootAmount').value = ''; $('shootHint').textContent = ''; }
+            $('shootName').innerHTML = list.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('') + customOpt;
             onShootSelect();
         }
         function onShootSelect() {
+            const custom = isCustom('shootName');
+            $('shootCustomWrap').classList.toggle('hidden', !custom);
             const s = master.shoots.find(x => x.id === $('shootName').value);
-            if (s) {
-                $('shootAmount').value = s.price;
-                $('shootHint').textContent = s.details ? `Includes: ${s.details}` : '';
-            }
+            if (custom || !s) { $('shootAmount').value = ''; $('shootHint').textContent = ''; return; }
+            $('shootAmount').value = s.price;
+            $('shootHint').textContent = s.details ? `Includes: ${s.details}` : '';
         }
+
+        // Events
         function populateEvents() {
             const cats = [...new Set(master.events.map(e => e.category))];
             const current = $('eventCat').value || 'All';
@@ -754,45 +975,85 @@
             $('eventCat').value = cats.includes(current) ? current : 'All';
             const cat = $('eventCat').value;
             const list = master.events.filter(e => cat === 'All' || e.category === cat);
-            $('eventSelect').innerHTML = list.length
-                ? list.map(e => `<option value="${e.id}">[${esc(e.category)}] ${esc(e.name)}</option>`).join('')
-                : '<option value="">No packages yet</option>';
+            $('eventSelect').innerHTML = list.map(e => `<option value="${e.id}">[${esc(e.category)}] ${esc(e.name)}</option>`).join('') + customOpt;
             onEventSelect();
         }
         function onEventSelect() {
+            const custom = isCustom('eventSelect');
+            $('eventCustomWrap').classList.toggle('hidden', !custom);
             const ev = master.events.find(x => x.id === $('eventSelect').value);
-            if (ev) {
-                $('eventAmount').value = ev.price;
-                $('eventHint').textContent = ev.details || '';
-            }
+            if (custom || !ev) { $('eventAmount').value = ''; $('eventHint').textContent = ''; return; }
+            $('eventAmount').value = ev.price;
+            $('eventHint').textContent = ev.details || '';
         }
 
         function addItem(e) {
             e.preventDefault();
             if (category === 'Frame' || category === 'Product') {
-                const item = master.catalog.find(i => i.id === $('itemSelect').value);
-                const v = item?.variants[parseInt($('variantSelect').value, 10)];
-                if (!item || !v) return toast('Choose an item and size first.', 'error');
+                const qty = Math.max(1, parseInt($('itemQty').value, 10) || 1);
                 const price = parseFloat($('unitPrice').value);
                 if (!(price >= 0)) return toast('Enter a valid unit price.', 'error');
-                const qty = Math.max(1, parseInt($('itemQty').value, 10) || 1);
-                cart.push({ id: Date.now(), title: item.name, category, details: `Size: ${v.size}`, qty, price });
+                if (isCustom('itemSelect')) {
+                    const name = $('customName').value.trim();
+                    if (!name) return toast('Type the item name.', 'error');
+                    const size = $('customSize').value.trim();
+                    cart.push({ id: Date.now(), title: name, category, details: size ? `Size: ${size}` : 'Custom item', qty, price });
+                    $('customName').value = ''; $('customSize').value = ''; $('unitPrice').value = '';
+                } else {
+                    const item = master.catalog.find(i => i.id === $('itemSelect').value);
+                    const v = item?.variants[parseInt($('variantSelect').value, 10)];
+                    if (!item || !v) return toast('Choose an item and size first.', 'error');
+                    cart.push({ id: Date.now(), title: item.name, category, details: `Size: ${v.size}`, qty, price });
+                }
                 $('itemQty').value = 1;
+            } else if (category === 'Passport') {
+                const amount = parseFloat($('passportAmount').value);
+                if (!(amount > 0)) return toast('Enter the passport photo price.', 'error');
+                const qty = Math.max(1, parseInt($('passportQty').value, 10) || 1);
+                const p = master.passports.find(x => x.id === $('passportSelect').value);
+                let title;
+                if (isCustom('passportSelect')) {
+                    title = $('passportCustomName').value.trim();
+                    if (!title) return toast('Type the passport package name.', 'error');
+                } else title = p ? p.name : 'Passport photos';
+                const note = $('passportComment').value.trim() || (!isCustom('passportSelect') && p?.details) || 'Passport size photos';
+                cart.push({ id: Date.now(), title, category: 'Passport', details: note, qty, price: amount });
+                $('passportComment').value = ''; $('passportQty').value = 1;
+                if (isCustom('passportSelect')) { $('passportCustomName').value = ''; $('passportAmount').value = ''; }
             } else if (category === 'Shoot') {
                 const type = $('shootType').value;
-                const s = master.shoots.find(x => x.id === $('shootName').value);
                 const amount = parseFloat($('shootAmount').value);
                 if (!(amount > 0)) return toast('Enter the shoot amount.', 'error');
+                let title;
+                if (isCustom('shootName')) {
+                    title = $('shootCustomName').value.trim();
+                    if (!title) return toast('Type the shoot name.', 'error');
+                } else {
+                    const s = master.shoots.find(x => x.id === $('shootName').value);
+                    title = s ? s.name : `${type} shoot`;
+                }
                 const note = $('shootComment').value.trim() || 'Standard session';
-                cart.push({ id: Date.now(), title: s ? s.name : `${type} shoot`, category: `${type} shoot`, details: `${type} | Notes: ${note}`, qty: 1, price: amount });
+                cart.push({ id: Date.now(), title, category: `${type} shoot`, details: `${type} | Notes: ${note}`, qty: 1, price: amount });
                 $('shootComment').value = '';
+                if (isCustom('shootName')) { $('shootCustomName').value = ''; $('shootAmount').value = ''; }
             } else {
-                const ev = master.events.find(x => x.id === $('eventSelect').value);
                 const amount = parseFloat($('eventAmount').value);
                 if (!(amount > 0)) return toast('Enter the event amount.', 'error');
-                const note = $('eventComment').value.trim() || ev?.details || 'Event package';
-                cart.push({ id: Date.now(), title: ev ? ev.name : 'Event coverage', category: `Event (${ev ? ev.category : 'Package'})`, details: note, qty: 1, price: amount });
+                const ev = master.events.find(x => x.id === $('eventSelect').value);
+                let title, cat;
+                if (isCustom('eventSelect')) {
+                    title = $('eventCustomName').value.trim();
+                    if (!title) return toast('Type the event package name.', 'error');
+                    const picked = $('eventCat').value;
+                    cat = `Event (${picked === 'All' ? 'Custom' : picked})`;
+                } else {
+                    title = ev ? ev.name : 'Event coverage';
+                    cat = `Event (${ev ? ev.category : 'Package'})`;
+                }
+                const note = $('eventComment').value.trim() || (!isCustom('eventSelect') && ev?.details) || 'Event package';
+                cart.push({ id: Date.now(), title, category: cat, details: note, qty: 1, price: amount });
                 $('eventComment').value = '';
+                if (isCustom('eventSelect')) { $('eventCustomName').value = ''; $('eventAmount').value = ''; }
             }
             renderCart();
         }
@@ -806,7 +1067,7 @@
                     <td class="px-4 py-3 text-right font-bold text-slate-900">${fmt(r.qty * r.price)}</td>
                     <td class="px-4 py-3 text-center"><button onclick="removeItem(${r.id})" class="text-rose-500 hover:underline text-xs">Remove</button></td>
                 </tr>`).join('')
-                : '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">No items yet. Pick a frame, product, shoot or event above and choose Add to bill.</td></tr>';
+                : '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">No items yet. Pick a frame, product, passport, shoot or event above and choose Add to bill.</td></tr>';
             updateTotals();
         }
         function removeItem(id) { cart = cart.filter(i => i.id !== id); renderCart(); }
@@ -826,10 +1087,12 @@
             if (!cart.length) return toast('Add at least one item first.', 'error');
             const name = $('clientName').value.trim(), phone = $('clientPhone').value.trim();
             if (!name || !phone) return toast('Client name and mobile number are required.', 'error');
+            if (!parseDMY($('billDate').value)) return toast('Enter the bill date as DD-MM-YYYY.', 'error');
             const t = getTotals();
             if (t.discount > t.subtotal) return toast('Discount cannot be more than the subtotal.', 'error');
             $('modalTotal').textContent = fmt(t.total);
             $('modalCustomer').textContent = `${name} (${phone})`;
+            $('modalBranch').textContent = branch;
             selectPay('Cash');
             $('paymentModal').classList.remove('hidden');
             $('paymentModal').classList.add('flex');
@@ -860,11 +1123,14 @@
 
         async function finalizeBill() {
             const t = getTotals();
+            const isoDate = parseDMY($('billDate').value);
+            if (!isoDate) return toast('Enter the bill date as DD-MM-YYYY.', 'error');
             const body = {
                 clientName: $('clientName').value.trim(),
                 clientPhone: $('clientPhone').value.trim(),
                 clientAddress: $('clientAddress').value.trim(),
-                date: $('billDate').value,
+                date: isoDate,
+                branch,
                 discount: t.discount,
                 paymentMode: payMode,
                 items: cart.map(({ title, category, details, qty, price }) => ({ title, category, details, qty, price }))
@@ -889,11 +1155,11 @@
             cart = [];
             ['clientName', 'clientPhone', 'clientAddress'].forEach(id => $(id).value = '');
             $('billDiscount').value = '0';
-            $('billDate').value = todayLocal();
+            $('billDate').value = fmtDate(todayLocal());
             renderCart();
             refreshBillNo();
 
-            $('doneInfo').textContent = `${lastBill.billNo} for ${lastBill.client.name}: ${fmt(lastBill.total)}`;
+            $('doneInfo').textContent = `${lastBill.billNo} (${lastBill.branch}) for ${lastBill.client.name}: ${fmt(lastBill.total)}`;
             printBill(lastBill);
             $('doneModal').classList.remove('hidden');
             $('doneModal').classList.add('flex');
@@ -909,9 +1175,10 @@
 
         function fillInvoice(b) {
             $('pdfBillNo').textContent = `Bill No: ${b.billNo}`;
-            $('pdfBillDate').textContent = `Date: ${b.date}`;
+            $('pdfBillDate').textContent = `Date: ${fmtDate(b.date)}`;
             $('pdfBillerName').textContent = b.billerUsername || b.billerName;
             $('pdfEmployeeId').textContent = b.billerEmpId;
+            $('pdfBranch').textContent = b.branch || 'Branch 1';
             $('pdfClientName').textContent = b.client.name;
             $('pdfClientPhone').textContent = b.client.phone;
             $('pdfClientAddress').textContent = b.client.address || '-';
@@ -934,20 +1201,36 @@
 
         function sendWhatsApp(b) {
             if (!b) return;
-            const items = b.items.map((i, idx) => `${idx + 1}. *${i.title}* (${i.details}) - ${fmt(i.qty * i.price)}`).join('\n');
-            const msg = encodeURIComponent(
-                `*VR PHOTOGRAPHY STUDIO — INVOICE*\n` +
-                `----------------------------------\n` +
-                `*Bill No:* ${b.billNo}\n*Date:* ${b.date}\n` +
-                `*Biller:* ${b.billerUsername} (${b.billerEmpId})\n` +
-                `*Customer:* ${b.client.name}\n*Mobile:* ${b.client.phone}\n` +
-                (b.client.address ? `*Address:* ${b.client.address}\n` : '') +
-                `----------------------------------\n*ITEMS:*\n${items}\n----------------------------------\n` +
-                `*Subtotal:* ${fmt(b.subtotal)}\n*Discount:* ${fmt(b.discount)}\n` +
-                `*Grand Total:* *${fmt(b.total)}*\n*Payment Mode:* ${payLabel(b)}\n` +
-                `----------------------------------\nThank you for choosing VR Photography Studio!`
-            );
+            const rs = n => '₹' + Number(n || 0).toFixed(2);
+            const pad = n => '\u2003'.repeat(n);          // em-spaces keep the centering in WhatsApp
+            const line = '----------------------------------';
+            const items = b.items.map((i, idx) => `${idx + 1}. *${i.title}* (${i.details}) - ${rs(i.qty * i.price)}`).join('\n');
+            const text = [
+                `${pad(4)}*VR PHOTOGRAPHY*`,
+                `${pad(6)}*INVOICE*`,
+                line,
+                `*Bill No:* ${b.billNo}`,
+                `*Date:* ${fmtDate(b.date)}`,
+                `*Branch:* ${b.branch || 'Branch 1'}`,
+                `*Biller:* ${b.billerUsername} (${b.billerEmpId})`,
+                `*Customer:* ${b.client.name}`,
+                `*Mobile:* ${b.client.phone}`,
+                `*Mobile: +91 90254 30044*`,
+                ...(b.client.address ? [`*Address:* ${b.client.address}`] : []),
+                line,
+                `*ITEMS:*`,
+                items,
+                line,
+                `*Subtotal:* ${rs(b.subtotal)}`,
+                `*Discount:* ${rs(b.discount)}`,
+                `*Grand Total:* *${rs(b.total)}*`,
+                `*Payment Mode:* ${payLabel(b)}`,
+                line,
+                `${pad(2)}Thank you for choosing`,
+                `${pad(4)}VR Photography !`
+            ].join('\n');
             const digits = b.client.phone.replace(/\D/g, '');
+            const msg = encodeURIComponent(text);
             const url = digits.length >= 10
                 ? `https://wa.me/${digits.length === 10 ? '91' + digits : digits}?text=${msg}`
                 : `https://wa.me/?text=${msg}`;
@@ -957,36 +1240,29 @@
         /* =====================================================
            PRICES & SIZES
         ===================================================== */
+        function masterRows(list, groupKey, mode, route, badgeClass, emptyText) {
+            return list.length ? list.map(x => `
+                <tr>
+                    <td class="px-4 py-3"><span class="px-2.5 py-1 rounded text-xs font-bold ${badgeClass(x)}">${esc(groupKey ? x[groupKey] : 'Passport')}</span></td>
+                    <td class="px-4 py-3 font-semibold text-slate-800">${esc(x.name)}</td>
+                    <td class="px-4 py-3 text-xs text-slate-600">${esc(x.details) || '-'}</td>
+                    <td class="px-4 py-3 text-right font-bold text-slate-900">₹${x.price}</td>
+                    <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+                        <button onclick="openEditModal('${mode}','${x.id}')" class="text-blue-600 hover:underline text-xs font-semibold">Edit</button>
+                        <button onclick="deleteMaster('${route}','${x.id}')" class="text-rose-500 hover:underline text-xs font-semibold">Delete</button>
+                    </td>
+                </tr>`).join('')
+                : `<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400">${emptyText}</td></tr>`;
+        }
+
         function renderMaster() {
-            // shoots
-            $('shootMasterBody').innerHTML = master.shoots.length ? master.shoots.map(s => `
-                <tr>
-                    <td class="px-4 py-3"><span class="px-2.5 py-1 rounded text-xs font-bold ${s.type === 'Indoor' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">${esc(s.type)}</span></td>
-                    <td class="px-4 py-3 font-semibold text-slate-800">${esc(s.name)}</td>
-                    <td class="px-4 py-3 text-xs text-slate-600">${esc(s.details) || '-'}</td>
-                    <td class="px-4 py-3 text-right font-bold text-slate-900">₹${s.price}</td>
-                    <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
-                        <button onclick="openEditModal('shoot','${s.id}')" class="text-blue-600 hover:underline text-xs font-semibold">Edit</button>
-                        <button onclick="deleteMaster('shoots','${s.id}')" class="text-rose-500 hover:underline text-xs font-semibold">Delete</button>
-                    </td>
-                </tr>`).join('')
-                : '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400">No shoots yet. Add one above.</td></tr>';
+            $('passportMasterBody').innerHTML = masterRows(master.passports, null, 'passport', 'passports',
+                () => 'bg-emerald-100 text-emerald-800', 'No passport packages yet. Add one above.');
+            $('shootMasterBody').innerHTML = masterRows(master.shoots, 'type', 'shoot', 'shoots',
+                s => s.type === 'Indoor' ? 'bg-amber-100 text-amber-800' : 'bg-teal-100 text-teal-800', 'No shoots yet. Add one above.');
+            $('eventMasterBody').innerHTML = masterRows(master.events, 'category', 'event', 'events',
+                () => 'bg-purple-100 text-purple-800', 'No event packages yet. Add one above.');
 
-            // events
-            $('eventMasterBody').innerHTML = master.events.length ? master.events.map(ev => `
-                <tr>
-                    <td class="px-4 py-3"><span class="px-2.5 py-1 rounded text-xs font-bold bg-purple-100 text-purple-800">${esc(ev.category)}</span></td>
-                    <td class="px-4 py-3 font-semibold text-slate-800">${esc(ev.name)}</td>
-                    <td class="px-4 py-3 text-xs text-slate-600">${esc(ev.details) || '-'}</td>
-                    <td class="px-4 py-3 text-right font-bold text-slate-900">₹${ev.price}</td>
-                    <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
-                        <button onclick="openEditModal('event','${ev.id}')" class="text-blue-600 hover:underline text-xs font-semibold">Edit</button>
-                        <button onclick="deleteMaster('events','${ev.id}')" class="text-rose-500 hover:underline text-xs font-semibold">Delete</button>
-                    </td>
-                </tr>`).join('')
-                : '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400">No event packages yet. Add one above.</td></tr>';
-
-            // catalog
             $('catalogBody').innerHTML = master.catalog.length ? master.catalog.map(item => `
                 <tr>
                     <td class="px-4 py-3"><span class="px-2.5 py-1 text-xs font-semibold rounded bg-blue-50 text-blue-700">${esc(item.category)}</span></td>
@@ -996,10 +1272,21 @@
                             <button onclick="openEditModal('variant','${item.id}',${idx})" class="hover:underline text-left" title="Edit size or price">${esc(v.size)}: <strong class="text-blue-600">₹${v.price}</strong> ✎</button>
                             <button onclick="deleteVariant('${item.id}',${idx})" aria-label="Delete size" class="text-slate-400 hover:text-rose-600 ml-1">×</button>
                         </span>`).join('')}</td>
-                    <td class="px-4 py-3 text-right"><button onclick="deleteCatalogItem('${item.id}')" class="text-rose-500 hover:underline text-xs font-semibold">Delete</button></td>
+                    <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+                        <button onclick="openEditModal('item','${item.id}')" class="text-blue-600 hover:underline text-xs font-semibold">Edit</button>
+                        <button onclick="deleteCatalogItem('${item.id}')" class="text-rose-500 hover:underline text-xs font-semibold">Delete</button>
+                    </td>
                 </tr>`).join('')
                 : '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400">No frames or products yet. Add one above.</td></tr>';
         }
+
+        const savePassport = e => { e.preventDefault(); run(async () => {
+            await api('/passports', { method: 'POST', body: {
+                name: $('adminPassportName').value, price: $('adminPassportPrice').value, details: $('adminPassportDetails').value } });
+            $('passportMasterForm').reset();
+            await refreshMaster();
+            toast('Passport package added.');
+        }); };
 
         const saveShoot = e => { e.preventDefault(); run(async () => {
             await api('/shoots', { method: 'POST', body: {
@@ -1049,9 +1336,14 @@
             $('editItemMode').value = mode;
             $('editItemId').value = id;
             $('editVariantIdx').value = varIdx;
-            const showExtras = mode !== 'variant';
-            $('editTypeWrapper').classList.toggle('hidden', !showExtras);
-            $('editDetailsWrapper').classList.toggle('hidden', !showExtras);
+            const hasType = mode === 'shoot' || mode === 'event' || mode === 'item';
+            const hasPrice = mode !== 'item';
+            const hasDetails = mode === 'shoot' || mode === 'event' || mode === 'passport';
+            $('editTypeWrapper').classList.toggle('hidden', !hasType);
+            $('editPriceWrapper').classList.toggle('hidden', !hasPrice);
+            $('editDetailsWrapper').classList.toggle('hidden', !hasDetails);
+            $('editItemPrice').required = hasPrice;
+
             if (mode === 'shoot') {
                 const s = master.shoots.find(x => x.id === id); if (!s) return;
                 $('editModalTitle').textContent = 'Edit shoot';
@@ -1066,6 +1358,18 @@
                 $('editNameLabel').textContent = 'Package name *';
                 $('editItemType').value = ev.category; $('editItemName').value = ev.name;
                 $('editItemPrice').value = ev.price; $('editItemDetails').value = ev.details || '';
+            } else if (mode === 'passport') {
+                const p = master.passports.find(x => x.id === id); if (!p) return;
+                $('editModalTitle').textContent = 'Edit passport package';
+                $('editNameLabel').textContent = 'Package name *';
+                $('editItemName').value = p.name; $('editItemPrice').value = p.price;
+                $('editItemDetails').value = p.details || '';
+            } else if (mode === 'item') {
+                const item = master.catalog.find(x => x.id === id); if (!item) return;
+                $('editModalTitle').textContent = 'Edit frame / product';
+                $('editTypeLabel').textContent = 'Type (Frame or Product)';
+                $('editNameLabel').textContent = 'Name *';
+                $('editItemType').value = item.category; $('editItemName').value = item.name;
             } else {
                 const item = master.catalog.find(x => x.id === id);
                 const v = item?.variants[varIdx]; if (!v) return;
@@ -1085,11 +1389,17 @@
             run(async () => {
                 const mode = $('editItemMode').value, id = $('editItemId').value;
                 const name = $('editItemName').value, price = $('editItemPrice').value;
+                const typeVal = $('editItemType').value;
                 if (mode === 'shoot') {
-                    const t = $('editItemType').value.toLowerCase().includes('out') ? 'Outdoor' : 'Indoor';
+                    const t = typeVal.toLowerCase().includes('out') ? 'Outdoor' : 'Indoor';
                     await api(`/shoots/${id}`, { method: 'PUT', body: { type: t, name, price, details: $('editItemDetails').value } });
                 } else if (mode === 'event') {
-                    await api(`/events/${id}`, { method: 'PUT', body: { category: $('editItemType').value, name, price, details: $('editItemDetails').value } });
+                    await api(`/events/${id}`, { method: 'PUT', body: { category: typeVal, name, price, details: $('editItemDetails').value } });
+                } else if (mode === 'passport') {
+                    await api(`/passports/${id}`, { method: 'PUT', body: { name, price, details: $('editItemDetails').value } });
+                } else if (mode === 'item') {
+                    const cat = typeVal.toLowerCase().includes('prod') ? 'Product' : 'Frame';
+                    await api(`/catalog/${id}`, { method: 'PUT', body: { category: cat, name } });
                 } else {
                     await api(`/catalog/${id}/variants/${$('editVariantIdx').value}`, { method: 'PUT', body: { size: name, price } });
                 }
@@ -1104,6 +1414,7 @@
         ===================================================== */
         async function loadEmployees() {
             const list = await api('/employees');
+            employeesCache = list;
             $('employeesBody').innerHTML = list.length ? list.map(emp => `
                 <tr>
                     <td class="px-6 py-3.5 font-mono text-xs font-bold text-slate-600">${esc(emp.empId)}</td>
@@ -1111,7 +1422,8 @@
                     <td class="px-6 py-3.5 font-semibold text-slate-800">${esc(emp.username)}</td>
                     <td class="px-6 py-3.5"><span class="px-2 py-0.5 text-xs rounded font-medium ${emp.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}">${emp.active ? 'Active' : 'Disabled'}</span></td>
                     <td class="px-6 py-3.5 text-right space-x-3 whitespace-nowrap">
-                        <button onclick="toggleEmployee('${emp.id}', ${!emp.active})" class="text-blue-600 hover:underline text-xs font-medium">${emp.active ? 'Disable' : 'Enable'}</button>
+                        <button onclick="openEmpEdit('${emp.id}')" class="text-blue-600 hover:underline text-xs font-medium">Edit</button>
+                        <button onclick="toggleEmployee('${emp.id}', ${!emp.active})" class="text-amber-600 hover:underline text-xs font-medium">${emp.active ? 'Disable' : 'Enable'}</button>
                         <button onclick="removeEmployee('${emp.id}', '${esc(emp.username)}')" class="text-rose-500 hover:underline text-xs font-medium">Remove</button>
                     </td>
                 </tr>`).join('')
@@ -1125,6 +1437,29 @@
                 e.target.reset();
                 await loadEmployees();
                 toast(`${emp.username} added as ${emp.empId}.`);
+            });
+        }
+        function openEmpEdit(id) {
+            const emp = employeesCache.find(x => x.id === id); if (!emp) return;
+            $('editEmpId').value = id;
+            $('editEmpIdLabel').textContent = `(${emp.empId})`;
+            $('editEmpName').value = emp.fullName || '';
+            $('editEmpUsername').value = emp.username;
+            $('editEmpModal').classList.remove('hidden');
+            $('editEmpModal').classList.add('flex');
+        }
+        function closeEmpEdit() {
+            $('editEmpModal').classList.add('hidden');
+            $('editEmpModal').classList.remove('flex');
+        }
+        function saveEmployeeEdit(e) {
+            e.preventDefault();
+            run(async () => {
+                await api(`/employees/${$('editEmpId').value}`, { method: 'PATCH', body: {
+                    fullName: $('editEmpName').value, username: $('editEmpUsername').value } });
+                closeEmpEdit();
+                await loadEmployees();
+                toast('Employee updated.');
             });
         }
         const toggleEmployee = (id, active) => run(async () => {
@@ -1150,6 +1485,10 @@
             $('statCash').textContent = fmt0(stats.all.cash);
             $('statGpay').textContent = fmt0(stats.all.gpay);
             $('statEmployees').textContent = stats.activeEmployees;
+            stats.byBranch.forEach((b, i) => {
+                $('statB' + (i + 1)).textContent = fmt0(b.revenue);
+                $('statB' + (i + 1) + 'Sub').textContent = `${b.count} invoice${b.count === 1 ? '' : 's'} | today ${fmt0(b.todayRevenue)}`;
+            });
             $('byEmployeeBody').innerHTML = stats.byEmployee.length ? stats.byEmployee.map(e => `
                 <tr>
                     <td class="px-6 py-3 font-medium text-slate-800">${esc(e.name)} <span class="text-xs text-slate-400 font-mono">${esc(e.empId)}</span></td>
@@ -1163,13 +1502,24 @@
         async function loadBills() {
             const p = new URLSearchParams({ limit: 300 });
             if ($('filterSearch').value.trim()) p.set('search', $('filterSearch').value.trim());
-            if ($('filterFrom').value) p.set('from', $('filterFrom').value);
-            if ($('filterTo').value) p.set('to', $('filterTo').value);
+            if ($('filterBranch').value) p.set('branch', $('filterBranch').value);
+            const from = $('filterFrom').value.trim(), to = $('filterTo').value.trim();
+            if (from) {
+                const iso = parseDMY(from);
+                if (!iso) return toast('Enter the From date as DD-MM-YYYY.', 'error');
+                p.set('from', iso);
+            }
+            if (to) {
+                const iso = parseDMY(to);
+                if (!iso) return toast('Enter the To date as DD-MM-YYYY.', 'error');
+                p.set('to', iso);
+            }
             dashBills = await run(() => api('/bills?' + p)) || [];
             $('invoiceBody').innerHTML = dashBills.length ? dashBills.map((b, i) => `
                 <tr>
                     <td class="px-6 py-3 font-semibold text-blue-600">${esc(b.billNo)}</td>
-                    <td class="px-6 py-3 text-slate-500">${esc(b.date)}</td>
+                    <td class="px-6 py-3 text-slate-500">${esc(fmtDate(b.date))}</td>
+                    <td class="px-6 py-3"><span class="px-2 py-0.5 text-xs rounded bg-slate-100 font-semibold">${esc(b.branch || 'Branch 1')}</span></td>
                     <td class="px-6 py-3 font-medium text-slate-800">${esc(b.client.name)} <span class="text-xs text-slate-400">(${esc(b.client.phone)})</span></td>
                     <td class="px-6 py-3 text-slate-600 text-xs">${esc(b.billerUsername)} (${esc(b.billerEmpId)})</td>
                     <td class="px-6 py-3"><span class="px-2 py-0.5 text-xs rounded bg-slate-100 font-medium">${esc(payLabel(b))}</span></td>
@@ -1179,11 +1529,11 @@
                         <button onclick="sendWhatsApp(dashBills[${i}])" class="text-emerald-600 hover:underline text-xs font-semibold">WhatsApp</button>
                     </td>
                 </tr>`).join('')
-                : '<tr><td colspan="7" class="px-6 py-8 text-center text-slate-400">No invoices match. Try clearing the filters.</td></tr>';
+                : '<tr><td colspan="8" class="px-6 py-8 text-center text-slate-400">No invoices match. Try clearing the filters.</td></tr>';
             $('invoiceCount').textContent = `Showing ${dashBills.length} invoice${dashBills.length === 1 ? '' : 's'} (latest first)`;
         }
         function clearFilters() {
-            ['filterSearch', 'filterFrom', 'filterTo'].forEach(id => $(id).value = '');
+            ['filterSearch', 'filterFrom', 'filterTo', 'filterBranch'].forEach(id => $(id).value = '');
             loadBills();
         }
     </script>
