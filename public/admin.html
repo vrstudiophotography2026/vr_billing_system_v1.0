@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR Photography | Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-serif-studio { font-family: 'Playfair Display', serif; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        @media print {
+            @page { size: A4; margin: 12mm; }
+            body { background: #ffffff !important; height: auto !important; overflow: visible !important; }
+            .no-print { display: none !important; }
+            #designer-pdf-invoice {
+                display: block !important;
+                visibility: visible !important;
+                position: static !important;
+                width: 100% !important;
+                box-shadow: none !important;
+                border: 2px solid #0f172a !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex overflow-hidden">
+
+    <div id="toast-container" class="fixed top-5 right-5 z-[60] flex flex-col gap-2 no-print"></div>
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-20 flex-shrink-0 no-print">
+        <div class="h-16 flex items-center px-6 border-b border-slate-800">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-bold">VR</div>
+                <div>
+                    <span class="text-white font-bold text-sm block leading-none">VR Photography</span>
+                    <span class="text-[11px] text-amber-400">Admin control</span>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 py-6 flex flex-col gap-1.5 px-3">
+            <button data-target="billing-tab" class="nav-btn w-full flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors text-left">
+                <span class="mr-3">🧾</span> Billing desk
+            </button>
+            <button data-target="catalog-tab" class="nav-btn w-full flex items-center px-4 py-3 rounded-lg hover:bg-slate-800 text-sm font-medium transition-colors text-left">
+                <span class="mr-3">🏷️</span> Prices &amp; sizes
+            </button>
+            <button data-target="employees-tab" class="nav-btn w-full flex items-center px-4 py-3 rounded-lg hover:bg-slate-800 text-sm font-medium transition-colors text-left">
+                <span class="mr-3">👥</span> Employees
+            </button>
+            <button data-target="dashboard-tab" class="nav-btn w-full flex items-center px-4 py-3 rounded-lg hover:bg-slate-800 text-sm font-medium transition-colors text-left">
+                <span class="mr-3">📊</span> Sales &amp; invoices
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-slate-800 space-y-2">
+            <a href="employee.html" class="w-full flex items-center justify-center px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-amber-400">Open employee view</a>
+            <a href="index.html" onclick="sessionStorage.clear()" class="w-full flex items-center justify-center px-3 py-2 rounded-lg border border-slate-700 hover:bg-rose-600/20 hover:border-rose-500 text-xs font-medium text-slate-400 hover:text-rose-300">Log out</a>
+        </div>
+    </aside>
+
+    <main class="flex-1 h-full overflow-y-auto no-print">
+
+        <!-- ================= 1. BILLING ================= -->
+        <div id="billing-tab" class="tab-content active">
+            <header class="bg-white px-8 py-4 border-b border-slate-200 flex flex-wrap gap-4 items-center justify-between sticky top-0 z-10">
+                <div>
+                    <h1 class="text-xl font-bold text-slate-800">Billing desk</h1>
+                    <p class="text-xs text-slate-500">Frames, products, indoor and outdoor shoots and event coverage</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">
+                        <span class="text-[11px] font-semibold text-amber-700 block">Next bill number</span>
+                        <input type="text" id="billNoInput" readonly class="bg-transparent font-bold text-sm text-slate-900 w-32 focus:outline-none">
+                    </div>
+                    <div class="bg-slate-100 px-3 py-1.5 rounded-lg">
+                        <span class="text-[11px] font-semibold text-slate-500 block">Biller</span>
+                        <span class="font-semibold text-xs text-slate-800" id="billerLabel">admin@vr (VR-ADMIN-01)</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="p-8 max-w-6xl mx-auto space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-sm font-bold text-slate-800 mb-4">Customer</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label for="clientName" class="block text-xs font-semibold text-slate-700 mb-1">Client name *</label>
+                            <input type="text" id="clientName" placeholder="e.g. Karthik Raja" class="w-full border border-slate-300 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label for="clientPhone" class="block text-xs font-semibold text-slate-700 mb-1">Mobile number *</label>
+                            <input type="tel" id="clientPhone" placeholder="e.g. 9876543210" class="w-full border border-slate-300 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label for="billDate" class="block text-xs font-semibold text-slate-700 mb-1">Bill date *</label>
+                            <input type="date" id="billDate" class="w-full border border-slate-300 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label for="clientAddress" class="block text-xs font-semibold text-slate-700 mb-1">Address <span class="text-slate-400 font-normal">(optional)</span></label>
+                            <input type="text" id="clientAddress" placeholder="Street / city" class="w-full border border-slate-300 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-sm font-bold text-slate-800 mb-4">Add to bill</h2>
+                    <div class="flex flex-wrap gap-2 mb-5">
+                        <button type="button" onclick="setCategory('Frame')" id="cat-btn-Frame" class="cat-pill px-4 py-2 rounded-lg text-xs font-semibold">🖼️ Photo frames</button>
+                        <button type="button" onclick="setCategory('Product')" id="cat-btn-Product" class="cat-pill px-4 py-2 rounded-lg text-xs font-semibold">📦 Albums &amp; products</button>
+                        <button type="button" onclick="setCategory('Shoot')" id="cat-btn-Shoot" class="cat-pill px-4 py-2 rounded-lg text-xs font-semibold">📸 Indoor / outdoor shoot</button>
+                        <button type="button" onclick="setCategory('Event')" id="cat-btn-Event" class="cat-pill px-4 py-2 rounded-lg text-xs font-semibold">🎉 Event coverage</button>
+                    </div>
+
+                    <form onsubmit="addItem(event)" class="space-y-4">
+                        <div id="frameProductFields" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label id="itemSelectLabel" for="itemSelect" class="block text-xs font-semibold text-slate-700 mb-1">Select frame</label>
+                                <select id="itemSelect" onchange="onItemChange()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+                            </div>
+                            <div>
+                                <label for="variantSelect" class="block text-xs font-semibold text-slate-700 mb-1">Select size</label>
+                                <select id="variantSelect" onchange="onVariantChange()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"></select>
+                            </div>
+                            <div>
+                                <label for="unitPrice" class="block text-xs font-semibold text-slate-700 mb-1">Unit price (₹)</label>
+                                <input type="number" id="unitPrice" min="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-blue-600 bg-blue-50/50">
+                            </div>
+                            <div>
+                                <label for="itemQty" class="block text-xs font-semibold text-slate-700 mb-1">Quantity</label>
+                                <input type="number" id="itemQty" min="1" value="1" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                        </div>
+
+                        <div id="shootFields" class="hidden p-5 rounded-xl bg-amber-50/70 border border-amber-200 space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label for="shootType" class="block text-xs font-semibold text-amber-900 mb-1">Shoot type</label>
+                                    <select id="shootType" onchange="populateShoots()" class="w-full border border-amber-300 rounded-lg px-3 py-2.5 text-sm bg-white font-medium">
+                                        <option value="Indoor">Indoor shoot (in studio)</option>
+                                        <option value="Outdoor">Outdoor shoot (on location)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="shootName" class="block text-xs font-semibold text-amber-900 mb-1">Shoot name</label>
+                                    <select id="shootName" onchange="onShootSelect()" class="w-full border border-amber-300 rounded-lg px-3 py-2.5 text-sm bg-white font-medium"></select>
+                                </div>
+                                <div>
+                                    <label for="shootComment" class="block text-xs font-semibold text-amber-900 mb-1">Notes (baby, family, individual)</label>
+                                    <input type="text" id="shootComment" placeholder="Baby shoot, family, individual..." class="w-full border border-amber-300 rounded-lg px-3 py-2.5 text-sm bg-white">
+                                </div>
+                                <div>
+                                    <label for="shootAmount" class="block text-xs font-bold text-amber-900 mb-1">Shoot amount (₹) *</label>
+                                    <input type="number" id="shootAmount" min="0" placeholder="Enter amount" class="w-full border-2 border-amber-400 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 bg-white">
+                                </div>
+                            </div>
+                            <p id="shootHint" class="text-xs text-amber-800 italic"></p>
+                        </div>
+
+                        <div id="eventFields" class="hidden p-5 rounded-xl bg-purple-50/70 border border-purple-200 space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label for="eventCat" class="block text-xs font-semibold text-purple-900 mb-1">Event category</label>
+                                    <select id="eventCat" onchange="populateEvents()" class="w-full border border-purple-300 rounded-lg px-3 py-2.5 text-sm bg-white font-medium"></select>
+                                </div>
+                                <div>
+                                    <label for="eventSelect" class="block text-xs font-semibold text-purple-900 mb-1">Event package</label>
+                                    <select id="eventSelect" onchange="onEventSelect()" class="w-full border border-purple-300 rounded-lg px-3 py-2.5 text-sm bg-white font-medium"></select>
+                                </div>
+                                <div>
+                                    <label for="eventComment" class="block text-xs font-semibold text-purple-900 mb-1">Event notes / venue</label>
+                                    <input type="text" id="eventComment" placeholder="Venue, date, extra hours..." class="w-full border border-purple-300 rounded-lg px-3 py-2.5 text-sm bg-white">
+                                </div>
+                                <div>
+                                    <label for="eventAmount" class="block text-xs font-bold text-purple-900 mb-1">Event amount (₹) *</label>
+                                    <input type="number" id="eventAmount" min="0" placeholder="Enter amount" class="w-full border-2 border-purple-400 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 bg-white">
+                                </div>
+                            </div>
+                            <p id="eventHint" class="text-xs text-purple-800 italic"></p>
+                        </div>
+
+                        <div class="flex justify-end">
+                            <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-lg px-6 py-2.5 text-sm shadow">Add to bill</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+                        <div class="px-6 py-4 border-b border-slate-100 font-bold text-sm text-slate-800">Bill items</div>
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-xs">
+                                    <th class="px-4 py-3 border-b">Particulars</th>
+                                    <th class="px-4 py-3 border-b">Details / notes</th>
+                                    <th class="px-4 py-3 border-b text-center">Qty</th>
+                                    <th class="px-4 py-3 border-b text-right">Amount</th>
+                                    <th class="px-4 py-3 border-b text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cartBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                        <div class="space-y-3">
+                            <h3 class="text-sm font-bold text-slate-800 border-b pb-2">Bill summary</h3>
+                            <div class="flex justify-between text-sm text-slate-600 pt-1">
+                                <span>Subtotal</span><span id="subtotalLabel" class="font-semibold">₹0.00</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm text-slate-600">
+                                <label for="billDiscount">Discount (₹)</label>
+                                <input type="number" id="billDiscount" value="0" min="0" oninput="updateTotals()" class="w-28 text-right border border-slate-300 rounded-lg px-2.5 py-1">
+                            </div>
+                            <div class="pt-3 border-t border-slate-200 flex justify-between items-center">
+                                <span class="text-base font-bold text-slate-800">Grand total</span>
+                                <span id="totalLabel" class="text-2xl font-extrabold text-blue-600">₹0.00</span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="openCheckout()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl py-3.5 text-sm shadow-lg shadow-blue-600/20">
+                            Choose payment mode
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 2. PRICES & SIZES ================= -->
+        <div id="catalog-tab" class="tab-content">
+            <header class="bg-white px-8 py-5 border-b border-slate-200 sticky top-0 z-10">
+                <h1 class="text-xl font-bold text-slate-800">Prices &amp; sizes</h1>
+                <p class="text-xs text-slate-500">Add or edit frames, products, shoots and event packages. Changes show up on every billing desk straight away.</p>
+            </header>
+
+            <div class="p-8 max-w-6xl mx-auto space-y-8">
+
+                <!-- Shoots -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="border-b border-slate-100 pb-3 mb-4">
+                        <h2 class="text-sm font-bold text-slate-800">📸 Indoor &amp; outdoor shoots</h2>
+                        <p class="text-xs text-slate-500">Employees can still change the amount while billing. The price here is the default.</p>
+                    </div>
+                    <form id="shootMasterForm" onsubmit="saveShoot(event)" class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end mb-6 bg-amber-50/60 p-4 rounded-xl border border-amber-200">
+                        <div>
+                            <label for="adminShootType" class="block text-xs font-semibold text-amber-950 mb-1">Shoot type</label>
+                            <select id="adminShootType" required class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                <option value="Indoor">Indoor shoot</option>
+                                <option value="Outdoor">Outdoor shoot</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="adminShootName" class="block text-xs font-semibold text-amber-950 mb-1">Shoot name *</label>
+                            <input type="text" id="adminShootName" placeholder="e.g. Baby studio shoot" required class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white">
+                        </div>
+                        <div>
+                            <label for="adminShootPrice" class="block text-xs font-semibold text-amber-950 mb-1">Default amount (₹) *</label>
+                            <input type="number" id="adminShootPrice" min="0" placeholder="1500" required class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="adminShootDetails" class="block text-xs font-semibold text-amber-950 mb-1">What's included</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="adminShootDetails" placeholder="e.g. 1 hour session + 10 retouched photos" class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 rounded-lg text-sm whitespace-nowrap">Add shoot</button>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead><tr class="bg-slate-50 text-slate-500 text-xs">
+                                <th class="px-4 py-3 border-b">Type</th><th class="px-4 py-3 border-b">Name</th><th class="px-4 py-3 border-b">Included</th>
+                                <th class="px-4 py-3 border-b text-right">Default price</th><th class="px-4 py-3 border-b text-right">Actions</th>
+                            </tr></thead>
+                            <tbody id="shootMasterBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Events -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="border-b border-slate-100 pb-3 mb-4">
+                        <h2 class="text-sm font-bold text-slate-800">🎉 Event packages</h2>
+                        <p class="text-xs text-slate-500">Wedding, baby shoot, product and any other category you add.</p>
+                    </div>
+                    <form id="eventMasterForm" onsubmit="saveEvent(event)" class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end mb-6 bg-purple-50/60 p-4 rounded-xl border border-purple-200">
+                        <div>
+                            <label for="adminEventCategory" class="block text-xs font-semibold text-purple-950 mb-1">Event category</label>
+                            <input type="text" id="adminEventCategory" list="eventCategoryList" required placeholder="Wedding" class="w-full border border-purple-300 rounded-lg px-3 py-2 text-sm bg-white">
+                            <datalist id="eventCategoryList"><option value="Wedding"><option value="Baby Shoot"><option value="Product"></datalist>
+                        </div>
+                        <div>
+                            <label for="adminEventName" class="block text-xs font-semibold text-purple-950 mb-1">Package name *</label>
+                            <input type="text" id="adminEventName" placeholder="e.g. Muhurtham full package" required class="w-full border border-purple-300 rounded-lg px-3 py-2 text-sm bg-white">
+                        </div>
+                        <div>
+                            <label for="adminEventPrice" class="block text-xs font-semibold text-purple-950 mb-1">Price (₹) *</label>
+                            <input type="number" id="adminEventPrice" min="0" placeholder="45000" required class="w-full border border-purple-300 rounded-lg px-3 py-2 text-sm bg-white">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="adminEventDetails" class="block text-xs font-semibold text-purple-950 mb-1">What's included</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="adminEventDetails" placeholder="e.g. Photo + candid + drone + album" class="w-full border border-purple-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 py-2 rounded-lg text-sm whitespace-nowrap">Add event</button>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead><tr class="bg-slate-50 text-slate-500 text-xs">
+                                <th class="px-4 py-3 border-b">Category</th><th class="px-4 py-3 border-b">Package</th><th class="px-4 py-3 border-b">Included</th>
+                                <th class="px-4 py-3 border-b text-right">Price</th><th class="px-4 py-3 border-b text-right">Actions</th>
+                            </tr></thead>
+                            <tbody id="eventMasterBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Frames & products -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="border-b border-slate-100 pb-3 mb-4">
+                        <h2 class="text-sm font-bold text-slate-800">🖼️ Frames &amp; products</h2>
+                        <p class="text-xs text-slate-500">Saving an existing name with a new size adds that size. Saving an existing size updates its price.</p>
+                    </div>
+                    <form id="catalogForm" onsubmit="saveCatalogItem(event)" class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <div>
+                            <label for="masterCategory" class="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+                            <select id="masterCategory" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                <option value="Frame">Frame</option>
+                                <option value="Product">Product (album / print)</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="masterItemName" class="block text-xs font-semibold text-slate-700 mb-1">Frame / product name</label>
+                            <input type="text" id="masterItemName" placeholder="e.g. Classic wooden frame" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+                        </div>
+                        <div>
+                            <label for="masterVariantSize" class="block text-xs font-semibold text-slate-700 mb-1">Size</label>
+                            <input type="text" id="masterVariantSize" placeholder="e.g. 12x18 Inch" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+                        </div>
+                        <div>
+                            <label for="masterVariantPrice" class="block text-xs font-semibold text-slate-700 mb-1">Price (₹)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="masterVariantPrice" min="0" placeholder="950" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg text-sm">Save</button>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead><tr class="bg-slate-50 text-slate-500 text-xs">
+                                <th class="px-4 py-3 border-b">Category</th><th class="px-4 py-3 border-b">Name</th>
+                                <th class="px-4 py-3 border-b">Sizes &amp; prices (click a size to edit)</th><th class="px-4 py-3 border-b text-right">Delete</th>
+                            </tr></thead>
+                            <tbody id="catalogBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 3. EMPLOYEES ================= -->
+        <div id="employees-tab" class="tab-content">
+            <header class="bg-white px-8 py-5 border-b border-slate-200 sticky top-0 z-10">
+                <h1 class="text-xl font-bold text-slate-800">Employees</h1>
+                <p class="text-xs text-slate-500">Add each employee here. They pick their name on the login page, and their employee ID is printed on every invoice they create.</p>
+            </header>
+
+            <div class="p-8 max-w-5xl mx-auto space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-sm font-bold text-slate-800 mb-4">Add employee</h2>
+                    <form onsubmit="createEmployee(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div>
+                            <label for="newEmpName" class="block text-xs font-semibold text-slate-700 mb-1">Full name</label>
+                            <input type="text" id="newEmpName" placeholder="e.g. Vijay Kumar" class="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm">
+                        </div>
+                        <div>
+                            <label for="newEmpUsername" class="block text-xs font-semibold text-slate-700 mb-1">Username *</label>
+                            <input type="text" id="newEmpUsername" required placeholder="e.g. vijay_vr" autocomplete="off" class="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm">
+                        </div>
+                        <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-6 py-2.5 rounded-lg text-sm">Add employee</button>
+                    </form>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead><tr class="bg-slate-50 text-slate-500 text-xs">
+                            <th class="px-6 py-3.5 border-b">Employee ID</th><th class="px-6 py-3.5 border-b">Name</th><th class="px-6 py-3.5 border-b">Username</th>
+                            <th class="px-6 py-3.5 border-b">Status</th><th class="px-6 py-3.5 border-b text-right">Actions</th>
+                        </tr></thead>
+                        <tbody id="employeesBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 4. SALES ================= -->
+        <div id="dashboard-tab" class="tab-content">
+            <header class="bg-white px-8 py-5 border-b border-slate-200 sticky top-0 z-10">
+                <h1 class="text-xl font-bold text-slate-800">Sales &amp; invoices</h1>
+                <p class="text-xs text-slate-500">Revenue, payment split, employee sales and every bill with reprint.</p>
+            </header>
+
+            <div class="p-8 max-w-6xl mx-auto space-y-6">
+                <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-blue-600">
+                        <p class="text-xs font-semibold text-slate-400">Total revenue</p>
+                        <p id="statRevenue" class="text-2xl font-bold text-slate-800 mt-2">₹0</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-amber-500">
+                        <p class="text-xs font-semibold text-slate-400">Today's revenue</p>
+                        <p id="statToday" class="text-2xl font-bold text-slate-800 mt-2">₹0</p>
+                        <p id="statTodayCount" class="text-xs text-slate-400 mt-1"></p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-emerald-600">
+                        <p class="text-xs font-semibold text-slate-400">Invoices</p>
+                        <p id="statBills" class="text-2xl font-bold text-slate-800 mt-2">0</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-slate-400">
+                        <p class="text-xs font-semibold text-slate-400">Collected in cash</p>
+                        <p id="statCash" class="text-2xl font-bold text-slate-800 mt-2">₹0</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-sky-500">
+                        <p class="text-xs font-semibold text-slate-400">Collected on GPay</p>
+                        <p id="statGpay" class="text-2xl font-bold text-slate-800 mt-2">₹0</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 border-l-4 border-l-purple-500">
+                        <p class="text-xs font-semibold text-slate-400">Active employees</p>
+                        <p id="statEmployees" class="text-2xl font-bold text-slate-800 mt-2">0</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+                    <div class="px-6 py-4 border-b border-slate-100 font-bold text-sm text-slate-800">Sales by employee</div>
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead><tr class="bg-slate-50 text-slate-500 text-xs">
+                            <th class="px-6 py-3 border-b">Employee</th><th class="px-6 py-3 border-b text-right">Invoices</th><th class="px-6 py-3 border-b text-right">Revenue</th>
+                        </tr></thead>
+                        <tbody id="byEmployeeBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200">
+                    <div class="px-6 py-4 border-b border-slate-100 flex flex-wrap items-end gap-3">
+                        <div class="flex-1 min-w-[200px]">
+                            <label for="filterSearch" class="block text-xs font-semibold text-slate-600 mb-1">Search</label>
+                            <input type="search" id="filterSearch" placeholder="Bill no, customer name or phone" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label for="filterFrom" class="block text-xs font-semibold text-slate-600 mb-1">From</label>
+                            <input type="date" id="filterFrom" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label for="filterTo" class="block text-xs font-semibold text-slate-600 mb-1">To</label>
+                            <input type="date" id="filterTo" class="border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                        </div>
+                        <button onclick="loadBills()" class="bg-slate-900 text-white text-sm font-semibold px-4 py-2 rounded-lg">Apply</button>
+                        <button onclick="clearFilters()" class="text-sm text-slate-500 hover:text-slate-800 px-2 py-2">Clear</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead><tr class="bg-slate-50 text-slate-500 text-xs">
+                                <th class="px-6 py-3 border-b">Bill no</th><th class="px-6 py-3 border-b">Date</th><th class="px-6 py-3 border-b">Customer</th>
+                                <th class="px-6 py-3 border-b">Biller (ID)</th><th class="px-6 py-3 border-b">Payment</th>
+                                <th class="px-6 py-3 border-b text-right">Total</th><th class="px-6 py-3 border-b text-right">Actions</th>
+                            </tr></thead>
+                            <tbody id="invoiceBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                    <p id="invoiceCount" class="px-6 py-3 text-xs text-slate-400 border-t border-slate-100"></p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Payment modal -->
+    <div id="paymentModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5">
+            <div class="flex justify-between items-start border-b border-slate-100 pb-3">
+                <h3 class="text-lg font-bold text-slate-900">Select payment mode</h3>
+                <button onclick="closeCheckout()" aria-label="Close" class="text-slate-400 hover:text-slate-700 text-xl font-bold">×</button>
+            </div>
+            <div class="bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center">
+                <div>
+                    <span class="text-xs text-slate-400 block">Payable total</span>
+                    <span id="modalCustomer" class="text-xs text-amber-400 font-medium"></span>
+                </div>
+                <span id="modalTotal" class="text-2xl font-extrabold text-amber-400">₹0.00</span>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+                <button type="button" onclick="selectPay('Cash')" id="pay-btn-Cash" class="pay-btn rounded-xl py-3 px-2 text-center font-bold text-xs flex flex-col items-center gap-1"><span class="text-lg">💵</span><span>Cash</span></button>
+                <button type="button" onclick="selectPay('GPay')" id="pay-btn-GPay" class="pay-btn rounded-xl py-3 px-2 text-center font-bold text-xs flex flex-col items-center gap-1"><span class="text-lg">📱</span><span>GPay (UPI)</span></button>
+                <button type="button" onclick="selectPay('Mixed')" id="pay-btn-Mixed" class="pay-btn rounded-xl py-3 px-2 text-center font-bold text-xs flex flex-col items-center gap-1"><span class="text-lg">⚖️</span><span>Mixed</span></button>
+            </div>
+            <div id="mixedBox" class="hidden bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-2 gap-3">
+                <div>
+                    <label for="mixCash" class="block text-xs font-semibold text-slate-600 mb-1">Cash received (₹)</label>
+                    <input type="number" id="mixCash" min="0" oninput="syncMixed('cash')" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold">
+                </div>
+                <div>
+                    <label for="mixGpay" class="block text-xs font-semibold text-slate-600 mb-1">GPay received (₹)</label>
+                    <input type="number" id="mixGpay" min="0" oninput="syncMixed('gpay')" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-blue-600">
+                </div>
+            </div>
+            <button type="button" id="finishBtn" onclick="finalizeBill()" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white font-bold rounded-xl py-3.5 text-sm shadow-lg shadow-emerald-600/20">
+                Save bill and print invoice
+            </button>
+            <button type="button" onclick="closeCheckout()" class="w-full text-xs text-slate-500 hover:text-slate-800 py-1">Cancel and go back to the bill</button>
+        </div>
+    </div>
+
+    <!-- Bill saved modal -->
+    <div id="doneModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4 text-center">
+            <div class="w-12 h-12 mx-auto rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl">✓</div>
+            <div>
+                <h3 class="text-lg font-bold text-slate-900">Bill saved</h3>
+                <p id="doneInfo" class="text-sm text-slate-500 mt-1"></p>
+            </div>
+            <button type="button" onclick="sendWhatsApp(lastBill)" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl py-3 text-sm">Send invoice on WhatsApp</button>
+            <button type="button" onclick="printBill(lastBill)" class="w-full border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl py-2.5 text-sm">Print invoice again</button>
+            <button type="button" onclick="closeDone()" class="w-full text-sm text-slate-500 hover:text-slate-800 py-1">Start next bill</button>
+        </div>
+    </div>
+
+    <!-- Edit master modal -->
+    <div id="editMasterModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 id="editModalTitle" class="font-bold text-base text-slate-900">Edit item</h3>
+                <button onclick="closeEditModal()" aria-label="Close" class="text-slate-400 hover:text-slate-700 text-xl font-bold">×</button>
+            </div>
+            <form onsubmit="saveEdited(event)" class="space-y-4">
+                <input type="hidden" id="editItemMode">
+                <input type="hidden" id="editItemId">
+                <input type="hidden" id="editVariantIdx">
+                <div id="editTypeWrapper">
+                    <label id="editTypeLabel" for="editItemType" class="block text-xs font-semibold text-slate-700 mb-1">Type</label>
+                    <input type="text" id="editItemType" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label id="editNameLabel" for="editItemName" class="block text-xs font-semibold text-slate-700 mb-1">Name *</label>
+                    <input type="text" id="editItemName" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label for="editItemPrice" class="block text-xs font-semibold text-slate-700 mb-1">Price (₹) *</label>
+                    <input type="number" id="editItemPrice" min="0" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-blue-600">
+                </div>
+                <div id="editDetailsWrapper">
+                    <label for="editItemDetails" class="block text-xs font-semibold text-slate-700 mb-1">What's included</label>
+                    <input type="text" id="editItemDetails" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded-lg border text-xs font-semibold text-slate-600">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-lg bg-blue-600 text-white text-xs font-bold">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Printable invoice -->
+    <div id="designer-pdf-invoice" class="hidden bg-white text-slate-900 p-8 max-w-3xl mx-auto rounded-none">
+        <div class="border-b-2 border-slate-900 pb-5 flex justify-between items-start">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-slate-900 text-amber-400 flex items-center justify-center font-extrabold text-lg">VR</div>
+                <div>
+                    <h1 class="font-serif-studio text-2xl font-bold tracking-wide text-slate-900">VR PHOTOGRAPHY STUDIO</h1>
+                    <p class="text-xs text-slate-600 font-medium">Custom frames, indoor and outdoor shoots, wedding and event coverage</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <span class="inline-block bg-slate-900 text-white text-xs font-bold px-3 py-1 rounded">Tax Invoice</span>
+                <p id="pdfBillNo" class="text-sm font-extrabold text-slate-900 mt-2"></p>
+                <p id="pdfBillDate" class="text-xs text-slate-600"></p>
+            </div>
+        </div>
+        <div class="grid grid-cols-2 gap-6 py-5 border-b border-slate-200 text-xs">
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-1">
+                <p class="text-[10px] font-bold text-slate-400">Studio representative</p>
+                <p class="font-bold text-slate-800">Biller name: <span id="pdfBillerName" class="font-normal"></span></p>
+                <p class="font-bold text-slate-800">Employee ID: <span id="pdfEmployeeId" class="font-normal"></span></p>
+                <p class="font-bold text-slate-800">Studio: <span class="font-normal">VR Photography Main Studio</span></p>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-1">
+                <p class="text-[10px] font-bold text-slate-400">Billed to</p>
+                <p class="font-bold text-slate-800">Client name: <span id="pdfClientName" class="font-normal"></span></p>
+                <p class="font-bold text-slate-800">Mobile number: <span id="pdfClientPhone" class="font-normal"></span></p>
+                <p class="font-bold text-slate-800">Address: <span id="pdfClientAddress" class="font-normal"></span></p>
+            </div>
+        </div>
+        <div class="my-6">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-slate-900 text-white">
+                        <th class="py-2.5 px-3">#</th><th class="py-2.5 px-3">Item / shoot / package</th><th class="py-2.5 px-3">Category</th>
+                        <th class="py-2.5 px-3">Specifications / notes</th><th class="py-2.5 px-3 text-center">Qty</th>
+                        <th class="py-2.5 px-3 text-right">Rate</th><th class="py-2.5 px-3 text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody id="pdfItemsBody" class="divide-y divide-slate-200"></tbody>
+            </table>
+        </div>
+        <div class="grid grid-cols-2 gap-6 items-end pt-4 border-t-2 border-slate-900">
+            <div class="text-xs space-y-1.5">
+                <p class="font-bold text-slate-800">Payment mode: <span id="pdfPaymentBadge" class="font-semibold text-blue-700"></span></p>
+                <p class="text-slate-500 text-[11px]">Thank you for choosing VR Photography Studio! Goods and frames once sold will be serviced as per studio policy.</p>
+                <div class="pt-8"><p class="text-[11px] font-bold text-slate-700 border-t border-slate-300 inline-block pt-1 px-6">Authorized signatory</p></div>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
+                <div class="flex justify-between text-slate-600"><span>Subtotal:</span><span id="pdfSubtotal" class="font-bold"></span></div>
+                <div class="flex justify-between text-slate-600"><span>Discount:</span><span id="pdfDiscount" class="font-bold text-rose-600"></span></div>
+                <div class="flex justify-between text-base font-extrabold text-slate-900 pt-2 border-t border-slate-300"><span>Grand total:</span><span id="pdfGrandTotal"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ---------- helpers ---------- */
+        const TOKEN = sessionStorage.getItem('vr_token');
+        const $ = id => document.getElementById(id);
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const fmt = n => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const fmt0 = n => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+        const todayLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
+        async function api(path, opts = {}) {
+            const res = await fetch('/api' + path, {
+                method: opts.method || 'GET',
+                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+                body: opts.body ? JSON.stringify(opts.body) : undefined
+            });
+            const data = await res.json().catch(() => null);
+            if (res.status === 401) {
+                sessionStorage.clear();
+                window.location.href = 'index.html';
+                throw new Error('Please log in again.');
+            }
+            if (!res.ok) throw new Error(data?.error || 'Request failed.');
+            return data;
+        }
+        // run an action, show errors as a toast
+        async function run(fn) {
+            try { return await fn(); } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function toast(msg, type = 'success') {
+            const el = document.createElement('div');
+            el.className = `${type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'} text-white px-5 py-3 rounded-xl shadow-lg text-sm font-medium`;
+            el.textContent = msg;
+            $('toast-container').appendChild(el);
+            setTimeout(() => el.remove(), 3500);
+        }
+
+        /* ---------- state ---------- */
+        let me = null, master = { catalog: [], shoots: [], events: [] };
+        let category = 'Frame', cart = [], payMode = 'Cash', lastBill = null, dashBills = [];
+
+        window.onload = async () => {
+            if (!TOKEN) { window.location.href = 'index.html'; return; }
+            try {
+                me = await api('/auth/me');
+                if (me.role !== 'admin') { window.location.href = 'employee.html'; return; }
+                master = await api('/master');
+            } catch (e) { return; }
+            $('billerLabel').textContent = `${me.username} (${me.empId})`;
+            $('billDate').value = todayLocal();
+            setupTabs();
+            renderMaster();
+            setCategory('Frame');
+            renderCart();
+            refreshBillNo();
+        };
+
+        async function refreshBillNo() {
+            try { $('billNoInput').value = (await api('/bills/next-number')).billNo; } catch (e) {}
+        }
+        async function refreshMaster() {
+            master = await api('/master');
+            renderMaster();
+            setCategory(category);
+        }
+
+        function setupTabs() {
+            const buttons = document.querySelectorAll('.nav-btn');
+            buttons.forEach(btn => btn.addEventListener('click', () => {
+                buttons.forEach(b => { b.classList.remove('bg-blue-600', 'text-white'); b.classList.add('hover:bg-slate-800'); });
+                btn.classList.add('bg-blue-600', 'text-white');
+                btn.classList.remove('hover:bg-slate-800');
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                $(btn.dataset.target).classList.add('active');
+                if (btn.dataset.target === 'employees-tab') run(loadEmployees);
+                if (btn.dataset.target === 'dashboard-tab') run(loadDashboard);
+                if (btn.dataset.target === 'billing-tab') refreshBillNo();
+            }));
+        }
+
+        /* =====================================================
+           BILLING
+        ===================================================== */
+        function setCategory(cat) {
+            category = cat;
+            document.querySelectorAll('.cat-pill').forEach(b => {
+                b.className = 'cat-pill px-4 py-2 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200';
+            });
+            $('cat-btn-' + cat).className = 'cat-pill px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-sm';
+            const isFP = cat === 'Frame' || cat === 'Product';
+            $('frameProductFields').classList.toggle('hidden', !isFP);
+            $('shootFields').classList.toggle('hidden', cat !== 'Shoot');
+            $('eventFields').classList.toggle('hidden', cat !== 'Event');
+            if (isFP) {
+                $('itemSelectLabel').textContent = cat === 'Frame' ? 'Select frame' : 'Select product';
+                const items = master.catalog.filter(i => i.category === cat);
+                $('itemSelect').innerHTML = items.length
+                    ? items.map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('')
+                    : '<option value="">No items yet. Add some in Prices &amp; sizes.</option>';
+                onItemChange();
+            } else if (cat === 'Shoot') populateShoots();
+            else populateEvents();
+        }
+        function onItemChange() {
+            const item = master.catalog.find(i => i.id === $('itemSelect').value);
+            $('variantSelect').innerHTML = item
+                ? item.variants.map((v, idx) => `<option value="${idx}">${esc(v.size)} — ₹${v.price}</option>`).join('') : '';
+            onVariantChange();
+        }
+        function onVariantChange() {
+            const item = master.catalog.find(i => i.id === $('itemSelect').value);
+            const v = item?.variants[parseInt($('variantSelect').value, 10)];
+            $('unitPrice').value = v ? v.price : '';
+        }
+        function populateShoots() {
+            const type = $('shootType').value;
+            const list = master.shoots.filter(s => s.type === type);
+            $('shootName').innerHTML = list.length
+                ? list.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')
+                : `<option value="">Custom ${type} shoot</option>`;
+            if (!list.length) { $('shootAmount').value = ''; $('shootHint').textContent = ''; }
+            onShootSelect();
+        }
+        function onShootSelect() {
+            const s = master.shoots.find(x => x.id === $('shootName').value);
+            if (s) {
+                $('shootAmount').value = s.price;
+                $('shootHint').textContent = s.details ? `Includes: ${s.details}` : '';
+            }
+        }
+        function populateEvents() {
+            const cats = [...new Set(master.events.map(e => e.category))];
+            const current = $('eventCat').value || 'All';
+            $('eventCat').innerHTML = '<option value="All">All events</option>' + cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+            $('eventCat').value = cats.includes(current) ? current : 'All';
+            const cat = $('eventCat').value;
+            const list = master.events.filter(e => cat === 'All' || e.category === cat);
+            $('eventSelect').innerHTML = list.length
+                ? list.map(e => `<option value="${e.id}">[${esc(e.category)}] ${esc(e.name)}</option>`).join('')
+                : '<option value="">No packages yet</option>';
+            onEventSelect();
+        }
+        function onEventSelect() {
+            const ev = master.events.find(x => x.id === $('eventSelect').value);
+            if (ev) {
+                $('eventAmount').value = ev.price;
+                $('eventHint').textContent = ev.details || '';
+            }
+        }
+
+        function addItem(e) {
+            e.preventDefault();
+            if (category === 'Frame' || category === 'Product') {
+                const item = master.catalog.find(i => i.id === $('itemSelect').value);
+                const v = item?.variants[parseInt($('variantSelect').value, 10)];
+                if (!item || !v) return toast('Choose an item and size first.', 'error');
+                const price = parseFloat($('unitPrice').value);
+                if (!(price >= 0)) return toast('Enter a valid unit price.', 'error');
+                const qty = Math.max(1, parseInt($('itemQty').value, 10) || 1);
+                cart.push({ id: Date.now(), title: item.name, category, details: `Size: ${v.size}`, qty, price });
+                $('itemQty').value = 1;
+            } else if (category === 'Shoot') {
+                const type = $('shootType').value;
+                const s = master.shoots.find(x => x.id === $('shootName').value);
+                const amount = parseFloat($('shootAmount').value);
+                if (!(amount > 0)) return toast('Enter the shoot amount.', 'error');
+                const note = $('shootComment').value.trim() || 'Standard session';
+                cart.push({ id: Date.now(), title: s ? s.name : `${type} shoot`, category: `${type} shoot`, details: `${type} | Notes: ${note}`, qty: 1, price: amount });
+                $('shootComment').value = '';
+            } else {
+                const ev = master.events.find(x => x.id === $('eventSelect').value);
+                const amount = parseFloat($('eventAmount').value);
+                if (!(amount > 0)) return toast('Enter the event amount.', 'error');
+                const note = $('eventComment').value.trim() || ev?.details || 'Event package';
+                cart.push({ id: Date.now(), title: ev ? ev.name : 'Event coverage', category: `Event (${ev ? ev.category : 'Package'})`, details: note, qty: 1, price: amount });
+                $('eventComment').value = '';
+            }
+            renderCart();
+        }
+
+        function renderCart() {
+            $('cartBody').innerHTML = cart.length ? cart.map(r => `
+                <tr>
+                    <td class="px-4 py-3"><span class="font-semibold text-slate-800 block">${esc(r.title)}</span><span class="text-[11px] text-blue-600 font-medium">${esc(r.category)}</span></td>
+                    <td class="px-4 py-3 text-xs text-slate-600">${esc(r.details)}</td>
+                    <td class="px-4 py-3 text-center font-medium">${r.qty}</td>
+                    <td class="px-4 py-3 text-right font-bold text-slate-900">${fmt(r.qty * r.price)}</td>
+                    <td class="px-4 py-3 text-center"><button onclick="removeItem(${r.id})" class="text-rose-500 hover:underline text-xs">Remove</button></td>
+                </tr>`).join('')
+                : '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">No items yet. Pick a frame, product, shoot or event above and choose Add to bill.</td></tr>';
+            updateTotals();
+        }
+        function removeItem(id) { cart = cart.filter(i => i.id !== id); renderCart(); }
+
+        function getTotals() {
+            const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+            const discount = Math.max(0, parseFloat($('billDiscount').value) || 0);
+            return { subtotal, discount, total: Math.max(0, subtotal - discount) };
+        }
+        function updateTotals() {
+            const t = getTotals();
+            $('subtotalLabel').textContent = fmt(t.subtotal);
+            $('totalLabel').textContent = fmt(t.total);
+        }
+
+        function openCheckout() {
+            if (!cart.length) return toast('Add at least one item first.', 'error');
+            const name = $('clientName').value.trim(), phone = $('clientPhone').value.trim();
+            if (!name || !phone) return toast('Client name and mobile number are required.', 'error');
+            const t = getTotals();
+            if (t.discount > t.subtotal) return toast('Discount cannot be more than the subtotal.', 'error');
+            $('modalTotal').textContent = fmt(t.total);
+            $('modalCustomer').textContent = `${name} (${phone})`;
+            selectPay('Cash');
+            $('paymentModal').classList.remove('hidden');
+            $('paymentModal').classList.add('flex');
+        }
+        function closeCheckout() {
+            $('paymentModal').classList.add('hidden');
+            $('paymentModal').classList.remove('flex');
+        }
+        function selectPay(mode) {
+            payMode = mode;
+            ['Cash', 'GPay', 'Mixed'].forEach(m => {
+                $('pay-btn-' + m).className = 'pay-btn rounded-xl py-3 px-2 text-center font-bold text-xs flex flex-col items-center gap-1 ' +
+                    (m === mode ? 'border-2 border-blue-600 bg-blue-50 text-blue-700' : 'border border-slate-200 text-slate-700 hover:bg-slate-50');
+            });
+            const { total } = getTotals();
+            $('mixedBox').classList.toggle('hidden', mode !== 'Mixed');
+            if (mode === 'Mixed') {
+                const half = Math.round(total / 2);
+                $('mixCash').value = half;
+                $('mixGpay').value = (total - half).toFixed(2);
+            }
+        }
+        function syncMixed(changed) {
+            const { total } = getTotals();
+            if (changed === 'cash') $('mixGpay').value = Math.max(0, total - (parseFloat($('mixCash').value) || 0)).toFixed(2);
+            else $('mixCash').value = Math.max(0, total - (parseFloat($('mixGpay').value) || 0)).toFixed(2);
+        }
+
+        async function finalizeBill() {
+            const t = getTotals();
+            const body = {
+                clientName: $('clientName').value.trim(),
+                clientPhone: $('clientPhone').value.trim(),
+                clientAddress: $('clientAddress').value.trim(),
+                date: $('billDate').value,
+                discount: t.discount,
+                paymentMode: payMode,
+                items: cart.map(({ title, category, details, qty, price }) => ({ title, category, details, qty, price }))
+            };
+            if (payMode === 'Mixed') {
+                body.cashAmount = parseFloat($('mixCash').value) || 0;
+                body.gpayAmount = parseFloat($('mixGpay').value) || 0;
+                if (Math.abs(body.cashAmount + body.gpayAmount - t.total) > 0.01) {
+                    return toast(`Cash and GPay must add up to ${fmt(t.total)}.`, 'error');
+                }
+            }
+            $('finishBtn').disabled = true;
+            try {
+                lastBill = await api('/bills', { method: 'POST', body });
+            } catch (err) {
+                $('finishBtn').disabled = false;
+                return toast(err.message, 'error');
+            }
+            $('finishBtn').disabled = false;
+            closeCheckout();
+
+            cart = [];
+            ['clientName', 'clientPhone', 'clientAddress'].forEach(id => $(id).value = '');
+            $('billDiscount').value = '0';
+            $('billDate').value = todayLocal();
+            renderCart();
+            refreshBillNo();
+
+            $('doneInfo').textContent = `${lastBill.billNo} for ${lastBill.client.name}: ${fmt(lastBill.total)}`;
+            printBill(lastBill);
+            $('doneModal').classList.remove('hidden');
+            $('doneModal').classList.add('flex');
+        }
+        function closeDone() {
+            $('doneModal').classList.add('hidden');
+            $('doneModal').classList.remove('flex');
+        }
+
+        /* ---------- invoice / print / whatsapp ---------- */
+        const payLabel = b => b.paymentMode === 'Mixed'
+            ? `Mixed (Cash: ₹${b.cashAmount} + GPay: ₹${b.gpayAmount})` : b.paymentMode;
+
+        function fillInvoice(b) {
+            $('pdfBillNo').textContent = `Bill No: ${b.billNo}`;
+            $('pdfBillDate').textContent = `Date: ${b.date}`;
+            $('pdfBillerName').textContent = b.billerUsername || b.billerName;
+            $('pdfEmployeeId').textContent = b.billerEmpId;
+            $('pdfClientName').textContent = b.client.name;
+            $('pdfClientPhone').textContent = b.client.phone;
+            $('pdfClientAddress').textContent = b.client.address || '-';
+            $('pdfPaymentBadge').textContent = payLabel(b);
+            $('pdfItemsBody').innerHTML = b.items.map((i, idx) => `
+                <tr>
+                    <td class="py-2.5 px-3">${idx + 1}</td>
+                    <td class="py-2.5 px-3 font-bold">${esc(i.title)}</td>
+                    <td class="py-2.5 px-3">${esc(i.category)}</td>
+                    <td class="py-2.5 px-3">${esc(i.details)}</td>
+                    <td class="py-2.5 px-3 text-center">${i.qty}</td>
+                    <td class="py-2.5 px-3 text-right">${fmt(i.price)}</td>
+                    <td class="py-2.5 px-3 text-right font-bold">${fmt(i.qty * i.price)}</td>
+                </tr>`).join('');
+            $('pdfSubtotal').textContent = fmt(b.subtotal);
+            $('pdfDiscount').textContent = '- ' + fmt(b.discount);
+            $('pdfGrandTotal').textContent = fmt(b.total);
+        }
+        function printBill(b) { if (!b) return; fillInvoice(b); window.print(); }
+
+        function sendWhatsApp(b) {
+            if (!b) return;
+            const items = b.items.map((i, idx) => `${idx + 1}. *${i.title}* (${i.details}) - ${fmt(i.qty * i.price)}`).join('\n');
+            const msg = encodeURIComponent(
+                `*VR PHOTOGRAPHY STUDIO — INVOICE*\n` +
+                `----------------------------------\n` +
+                `*Bill No:* ${b.billNo}\n*Date:* ${b.date}\n` +
+                `*Biller:* ${b.billerUsername} (${b.billerEmpId})\n` +
+                `*Customer:* ${b.client.name}\n*Mobile:* ${b.client.phone}\n` +
+                (b.client.address ? `*Address:* ${b.client.address}\n` : '') +
+                `----------------------------------\n*ITEMS:*\n${items}\n----------------------------------\n` +
+                `*Subtotal:* ${fmt(b.subtotal)}\n*Discount:* ${fmt(b.discount)}\n` +
+                `*Grand Total:* *${fmt(b.total)}*\n*Payment Mode:* ${payLabel(b)}\n` +
+                `----------------------------------\nThank you for choosing VR Photography Studio!`
+            );
+            const digits = b.client.phone.replace(/\D/g, '');
+            const url = digits.length >= 10
+                ? `https://wa.me/${digits.length === 10 ? '91' + digits : digits}?text=${msg}`
+                : `https://wa.me/?text=${msg}`;
+            window.open(url, '_blank');
+        }
+
+        /* =====================================================
+           PRICES & SIZES
+        ===================================================== */
+        function renderMaster() {
+            // shoots
+            $('shootMasterBody').innerHTML = master.shoots.length ? master.shoots.map(s => `
+                <tr>
+                    <td class="px-4 py-3"><span class="px-2.5 py-1 rounded text-xs font-bold ${s.type === 'Indoor' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">${esc(s.type)}</span></td>
+                    <td class="px-4 py-3 font-semibold text-slate-800">${esc(s.name)}</td>
+                    <td class="px-4 py-3 text-xs text-slate-600">${esc(s.details) || '-'}</td>
+                    <td class="px-4 py-3 text-right font-bold text-slate-900">₹${s.price}</td>
+                    <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+                        <button onclick="openEditModal('shoot','${s.id}')" class="text-blue-600 hover:underline text-xs font-semibold">Edit</button>
+                        <button onclick="deleteMaster('shoots','${s.id}')" class="text-rose-500 hover:underline text-xs font-semibold">Delete</button>
+                    </td>
+                </tr>`).join('')
+                : '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400">No shoots yet. Add one above.</td></tr>';
+
+            // events
+            $('eventMasterBody').innerHTML = master.events.length ? master.events.map(ev => `
+                <tr>
+                    <td class="px-4 py-3"><span class="px-2.5 py-1 rounded text-xs font-bold bg-purple-100 text-purple-800">${esc(ev.category)}</span></td>
+                    <td class="px-4 py-3 font-semibold text-slate-800">${esc(ev.name)}</td>
+                    <td class="px-4 py-3 text-xs text-slate-600">${esc(ev.details) || '-'}</td>
+                    <td class="px-4 py-3 text-right font-bold text-slate-900">₹${ev.price}</td>
+                    <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+                        <button onclick="openEditModal('event','${ev.id}')" class="text-blue-600 hover:underline text-xs font-semibold">Edit</button>
+                        <button onclick="deleteMaster('events','${ev.id}')" class="text-rose-500 hover:underline text-xs font-semibold">Delete</button>
+                    </td>
+                </tr>`).join('')
+                : '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400">No event packages yet. Add one above.</td></tr>';
+
+            // catalog
+            $('catalogBody').innerHTML = master.catalog.length ? master.catalog.map(item => `
+                <tr>
+                    <td class="px-4 py-3"><span class="px-2.5 py-1 text-xs font-semibold rounded bg-blue-50 text-blue-700">${esc(item.category)}</span></td>
+                    <td class="px-4 py-3 font-semibold text-slate-800">${esc(item.name)}</td>
+                    <td class="px-4 py-3">${item.variants.map((v, idx) => `
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200 mr-2 mb-1">
+                            <button onclick="openEditModal('variant','${item.id}',${idx})" class="hover:underline text-left" title="Edit size or price">${esc(v.size)}: <strong class="text-blue-600">₹${v.price}</strong> ✎</button>
+                            <button onclick="deleteVariant('${item.id}',${idx})" aria-label="Delete size" class="text-slate-400 hover:text-rose-600 ml-1">×</button>
+                        </span>`).join('')}</td>
+                    <td class="px-4 py-3 text-right"><button onclick="deleteCatalogItem('${item.id}')" class="text-rose-500 hover:underline text-xs font-semibold">Delete</button></td>
+                </tr>`).join('')
+                : '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400">No frames or products yet. Add one above.</td></tr>';
+        }
+
+        const saveShoot = e => { e.preventDefault(); run(async () => {
+            await api('/shoots', { method: 'POST', body: {
+                type: $('adminShootType').value, name: $('adminShootName').value,
+                price: $('adminShootPrice').value, details: $('adminShootDetails').value } });
+            $('shootMasterForm').reset();
+            await refreshMaster();
+            toast('Shoot added.');
+        }); };
+
+        const saveEvent = e => { e.preventDefault(); run(async () => {
+            await api('/events', { method: 'POST', body: {
+                category: $('adminEventCategory').value, name: $('adminEventName').value,
+                price: $('adminEventPrice').value, details: $('adminEventDetails').value } });
+            $('eventMasterForm').reset();
+            await refreshMaster();
+            toast('Event package added.');
+        }); };
+
+        const saveCatalogItem = e => { e.preventDefault(); run(async () => {
+            await api('/catalog', { method: 'POST', body: {
+                category: $('masterCategory').value, name: $('masterItemName').value,
+                size: $('masterVariantSize').value, price: $('masterVariantPrice').value } });
+            const name = $('masterItemName').value, size = $('masterVariantSize').value;
+            $('catalogForm').reset();
+            await refreshMaster();
+            toast(`Saved ${name} (${size}).`);
+        }); };
+
+        const deleteMaster = (route, id) => run(async () => {
+            if (!confirm('Delete this item? Past bills are not affected.')) return;
+            await api(`/${route}/${id}`, { method: 'DELETE' });
+            await refreshMaster();
+        });
+        const deleteVariant = (id, idx) => run(async () => {
+            if (!confirm('Delete this size?')) return;
+            await api(`/catalog/${id}/variants/${idx}`, { method: 'DELETE' });
+            await refreshMaster();
+        });
+        const deleteCatalogItem = id => run(async () => {
+            if (!confirm('Delete this item and all its sizes?')) return;
+            await api(`/catalog/${id}`, { method: 'DELETE' });
+            await refreshMaster();
+        });
+
+        function openEditModal(mode, id, varIdx = 0) {
+            $('editItemMode').value = mode;
+            $('editItemId').value = id;
+            $('editVariantIdx').value = varIdx;
+            const showExtras = mode !== 'variant';
+            $('editTypeWrapper').classList.toggle('hidden', !showExtras);
+            $('editDetailsWrapper').classList.toggle('hidden', !showExtras);
+            if (mode === 'shoot') {
+                const s = master.shoots.find(x => x.id === id); if (!s) return;
+                $('editModalTitle').textContent = 'Edit shoot';
+                $('editTypeLabel').textContent = 'Type (Indoor or Outdoor)';
+                $('editNameLabel').textContent = 'Shoot name *';
+                $('editItemType').value = s.type; $('editItemName').value = s.name;
+                $('editItemPrice').value = s.price; $('editItemDetails').value = s.details || '';
+            } else if (mode === 'event') {
+                const ev = master.events.find(x => x.id === id); if (!ev) return;
+                $('editModalTitle').textContent = 'Edit event package';
+                $('editTypeLabel').textContent = 'Category';
+                $('editNameLabel').textContent = 'Package name *';
+                $('editItemType').value = ev.category; $('editItemName').value = ev.name;
+                $('editItemPrice').value = ev.price; $('editItemDetails').value = ev.details || '';
+            } else {
+                const item = master.catalog.find(x => x.id === id);
+                const v = item?.variants[varIdx]; if (!v) return;
+                $('editModalTitle').textContent = `Edit ${item.name}`;
+                $('editNameLabel').textContent = 'Size *';
+                $('editItemName').value = v.size; $('editItemPrice').value = v.price;
+            }
+            $('editMasterModal').classList.remove('hidden');
+            $('editMasterModal').classList.add('flex');
+        }
+        function closeEditModal() {
+            $('editMasterModal').classList.add('hidden');
+            $('editMasterModal').classList.remove('flex');
+        }
+        function saveEdited(e) {
+            e.preventDefault();
+            run(async () => {
+                const mode = $('editItemMode').value, id = $('editItemId').value;
+                const name = $('editItemName').value, price = $('editItemPrice').value;
+                if (mode === 'shoot') {
+                    const t = $('editItemType').value.toLowerCase().includes('out') ? 'Outdoor' : 'Indoor';
+                    await api(`/shoots/${id}`, { method: 'PUT', body: { type: t, name, price, details: $('editItemDetails').value } });
+                } else if (mode === 'event') {
+                    await api(`/events/${id}`, { method: 'PUT', body: { category: $('editItemType').value, name, price, details: $('editItemDetails').value } });
+                } else {
+                    await api(`/catalog/${id}/variants/${$('editVariantIdx').value}`, { method: 'PUT', body: { size: name, price } });
+                }
+                closeEditModal();
+                await refreshMaster();
+                toast('Changes saved.');
+            });
+        }
+
+        /* =====================================================
+           EMPLOYEES
+        ===================================================== */
+        async function loadEmployees() {
+            const list = await api('/employees');
+            $('employeesBody').innerHTML = list.length ? list.map(emp => `
+                <tr>
+                    <td class="px-6 py-3.5 font-mono text-xs font-bold text-slate-600">${esc(emp.empId)}</td>
+                    <td class="px-6 py-3.5 text-slate-800">${esc(emp.fullName) || '<span class="text-slate-400">-</span>'}</td>
+                    <td class="px-6 py-3.5 font-semibold text-slate-800">${esc(emp.username)}</td>
+                    <td class="px-6 py-3.5"><span class="px-2 py-0.5 text-xs rounded font-medium ${emp.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}">${emp.active ? 'Active' : 'Disabled'}</span></td>
+                    <td class="px-6 py-3.5 text-right space-x-3 whitespace-nowrap">
+                        <button onclick="toggleEmployee('${emp.id}', ${!emp.active})" class="text-blue-600 hover:underline text-xs font-medium">${emp.active ? 'Disable' : 'Enable'}</button>
+                        <button onclick="removeEmployee('${emp.id}', '${esc(emp.username)}')" class="text-rose-500 hover:underline text-xs font-medium">Remove</button>
+                    </td>
+                </tr>`).join('')
+                : '<tr><td colspan="5" class="px-6 py-8 text-center text-slate-400">No employees yet. Create the first login above.</td></tr>';
+        }
+
+        function createEmployee(e) {
+            e.preventDefault();
+            run(async () => {
+                const emp = await api('/employees', { method: 'POST', body: { fullName: $('newEmpName').value, username: $('newEmpUsername').value } });
+                e.target.reset();
+                await loadEmployees();
+                toast(`${emp.username} added as ${emp.empId}.`);
+            });
+        }
+        const toggleEmployee = (id, active) => run(async () => {
+            await api(`/employees/${id}`, { method: 'PATCH', body: { active } });
+            await loadEmployees();
+        });
+        const removeEmployee = (id, username) => run(async () => {
+            if (!confirm(`Remove ${username}? They will lose access immediately. Their past bills stay in the records.`)) return;
+            await api(`/employees/${id}`, { method: 'DELETE' });
+            await loadEmployees();
+            toast(`${username} removed.`);
+        });
+
+        /* =====================================================
+           SALES & INVOICES
+        ===================================================== */
+        async function loadDashboard() {
+            const stats = await api('/stats');
+            $('statRevenue').textContent = fmt0(stats.all.revenue);
+            $('statToday').textContent = fmt0(stats.today.revenue);
+            $('statTodayCount').textContent = `${stats.today.count} invoice${stats.today.count === 1 ? '' : 's'} today`;
+            $('statBills').textContent = stats.all.count;
+            $('statCash').textContent = fmt0(stats.all.cash);
+            $('statGpay').textContent = fmt0(stats.all.gpay);
+            $('statEmployees').textContent = stats.activeEmployees;
+            $('byEmployeeBody').innerHTML = stats.byEmployee.length ? stats.byEmployee.map(e => `
+                <tr>
+                    <td class="px-6 py-3 font-medium text-slate-800">${esc(e.name)} <span class="text-xs text-slate-400 font-mono">${esc(e.empId)}</span></td>
+                    <td class="px-6 py-3 text-right">${e.count}</td>
+                    <td class="px-6 py-3 text-right font-bold">${fmt0(e.revenue)}</td>
+                </tr>`).join('')
+                : '<tr><td colspan="3" class="px-6 py-6 text-center text-slate-400">No sales yet.</td></tr>';
+            await loadBills();
+        }
+
+        async function loadBills() {
+            const p = new URLSearchParams({ limit: 300 });
+            if ($('filterSearch').value.trim()) p.set('search', $('filterSearch').value.trim());
+            if ($('filterFrom').value) p.set('from', $('filterFrom').value);
+            if ($('filterTo').value) p.set('to', $('filterTo').value);
+            dashBills = await run(() => api('/bills?' + p)) || [];
+            $('invoiceBody').innerHTML = dashBills.length ? dashBills.map((b, i) => `
+                <tr>
+                    <td class="px-6 py-3 font-semibold text-blue-600">${esc(b.billNo)}</td>
+                    <td class="px-6 py-3 text-slate-500">${esc(b.date)}</td>
+                    <td class="px-6 py-3 font-medium text-slate-800">${esc(b.client.name)} <span class="text-xs text-slate-400">(${esc(b.client.phone)})</span></td>
+                    <td class="px-6 py-3 text-slate-600 text-xs">${esc(b.billerUsername)} (${esc(b.billerEmpId)})</td>
+                    <td class="px-6 py-3"><span class="px-2 py-0.5 text-xs rounded bg-slate-100 font-medium">${esc(payLabel(b))}</span></td>
+                    <td class="px-6 py-3 text-right font-bold text-slate-800">${fmt0(b.total)}</td>
+                    <td class="px-6 py-3 text-right space-x-3 whitespace-nowrap">
+                        <button onclick="printBill(dashBills[${i}])" class="text-blue-600 hover:underline text-xs font-semibold">Reprint</button>
+                        <button onclick="sendWhatsApp(dashBills[${i}])" class="text-emerald-600 hover:underline text-xs font-semibold">WhatsApp</button>
+                    </td>
+                </tr>`).join('')
+                : '<tr><td colspan="7" class="px-6 py-8 text-center text-slate-400">No invoices match. Try clearing the filters.</td></tr>';
+            $('invoiceCount').textContent = `Showing ${dashBills.length} invoice${dashBills.length === 1 ? '' : 's'} (latest first)`;
+        }
+        function clearFilters() {
+            ['filterSearch', 'filterFrom', 'filterTo'].forEach(id => $(id).value = '');
+            loadBills();
+        }
+    </script>
+</body>
+</html>

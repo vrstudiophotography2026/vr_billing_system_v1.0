@@ -1,0 +1,8 @@
+vrstudiophotography2026_db_user
+
+Password
+wLW6faHAk7tlG28S
+
+
+
+mongodb+srv://<db_username>:wLW6faHAk7tlG28S@billing.lmmjvlo.mongodb.net/

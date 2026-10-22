@@ -1,0 +1,17 @@
+{
+  "name": "vr-photography-pos",
+  "version": "4.0.0",
+  "description": "VR Photography Studio billing portal (Express + MongoDB)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.5.0"
+  },
+  "engines": { "node": ">=18" }
+}

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR Photography | Studio Management Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-serif-studio { font-family: 'Playfair Display', serif; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade { animation: fadeIn 0.35s ease-out forwards; }
+        @media (prefers-reduced-motion: reduce) { .animate-fade { animation: none; } }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between relative overflow-x-hidden">
+
+    <div class="fixed inset-0 pointer-events-none z-0">
+        <div class="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute top-1/2 -right-40 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+    </div>
+
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2"></div>
+
+    <header class="relative z-10 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md px-6 sm:px-8 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 shadow-lg shadow-amber-500/20">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <span class="font-serif-studio text-xl tracking-wide font-bold text-white">VR PHOTOGRAPHY</span>
+                <span class="block text-[10px] tracking-widest text-amber-400">Frames, shoots, events and prints</span>
+            </div>
+        </div>
+        <div class="text-xs text-slate-400 hidden sm:flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            Studio POS v4.0
+        </div>
+    </header>
+
+    <main class="relative z-10 flex-1 flex items-center justify-center p-6">
+        <div class="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-12 bg-slate-900/90 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl">
+
+            <!-- Left panel -->
+            <div class="lg:col-span-5 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800">
+                <div>
+                    <h1 class="font-serif-studio text-3xl font-bold text-white leading-tight">
+                        Capturing moments, simplifying billing.
+                    </h1>
+                    <p class="text-slate-400 text-sm mt-3 leading-relaxed">
+                        Bill frames, albums, indoor and outdoor shoots and event coverage. Take Cash, GPay or split payments, then print the invoice and send it on WhatsApp.
+                    </p>
+                </div>
+
+                <ul class="space-y-3 my-8 text-xs text-slate-300">
+                    <li class="bg-slate-800/60 p-3 rounded-lg border border-slate-700/50">Employees pick their name to start billing. Only the admin needs a password</li>
+                    <li class="bg-slate-800/60 p-3 rounded-lg border border-slate-700/50">Each invoice carries the biller's name and employee ID</li>
+                    <li class="bg-slate-800/60 p-3 rounded-lg border border-slate-700/50">All bills and prices are saved in the studio database</li>
+                </ul>
+
+                <div class="text-xs text-slate-500 flex items-center justify-between pt-4 border-t border-slate-800">
+                    <span>VR Photography Studio</span>
+                    <span>Authorized access only</span>
+                </div>
+            </div>
+
+            <!-- Right panel -->
+            <div class="lg:col-span-7 p-8 md:p-10 flex flex-col justify-center">
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold text-white">Sign in</h2>
+                    <p class="text-xs text-slate-400 mt-1">Choose how you are signing in.</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-6">
+                    <button type="button" id="tab-employee" onclick="switchRole('employee')" class="py-2.5 text-sm font-medium rounded-lg transition-all bg-amber-500 text-slate-950 shadow">Employee</button>
+                    <button type="button" id="tab-admin" onclick="switchRole('admin')" class="py-2.5 text-sm font-medium rounded-lg transition-all text-slate-400 hover:text-white">Admin</button>
+                </div>
+
+                <!-- Employee form -->
+                <form id="employee-form" class="space-y-4 animate-fade" onsubmit="handleEmployeeLogin(event)">
+                    <div>
+                        <label for="empSelect" class="block text-xs font-semibold text-slate-400 mb-1.5">Your name</label>
+                        <select id="empSelect" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <option value="" disabled selected>Loading...</option>
+                        </select>
+                        <p id="empHelp" class="text-[11px] text-slate-500 mt-2">Your employee ID is added to every invoice you create.</p>
+                    </div>
+                    <button type="submit" id="empBtn" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-semibold rounded-xl py-3 text-sm transition-all shadow-lg shadow-amber-500/20 disabled:opacity-60">
+                        Open billing counter
+                    </button>
+                </form>
+
+                <!-- Admin form -->
+                <form id="admin-form" class="space-y-4 hidden animate-fade" onsubmit="handleAdminLogin(event)">
+                    <div>
+                        <label for="adminUser" class="block text-xs font-semibold text-slate-400 mb-1.5">Admin username</label>
+                        <input type="text" id="adminUser" autocomplete="username" placeholder="admin@vr" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <div>
+                        <label for="adminPass" class="block text-xs font-semibold text-slate-400 mb-1.5">Password</label>
+                        <input type="password" id="adminPass" autocomplete="current-password" placeholder="Admin password" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <button type="submit" id="adminBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl py-3 text-sm transition-all shadow-lg shadow-blue-600/20 disabled:opacity-60">
+                        Open admin panel
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <footer class="relative z-10 text-center py-4 text-xs text-slate-600">
+        © 2026 VR Photography Studio. All rights reserved.
+    </footer>
+
+    <script>
+        function showToast(msg, type = 'error') {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            el.className = `${type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'} text-white px-5 py-3 rounded-xl shadow-lg text-sm font-medium animate-fade`;
+            el.textContent = msg;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 3500);
+        }
+
+        function switchRole(role) {
+            const empTab = document.getElementById('tab-employee');
+            const admTab = document.getElementById('tab-admin');
+            const on = 'py-2.5 text-sm font-medium rounded-lg transition-all shadow ';
+            const off = 'py-2.5 text-sm font-medium rounded-lg transition-all text-slate-400 hover:text-white';
+            if (role === 'employee') {
+                empTab.className = on + 'bg-amber-500 text-slate-950';
+                admTab.className = off;
+            } else {
+                admTab.className = on + 'bg-blue-600 text-white';
+                empTab.className = off;
+            }
+            document.getElementById('employee-form').classList.toggle('hidden', role !== 'employee');
+            document.getElementById('admin-form').classList.toggle('hidden', role !== 'admin');
+        }
+
+        async function login(url, body, button) {
+            button.disabled = true;
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || 'Could not sign in.');
+                sessionStorage.setItem('vr_token', data.token);
+                sessionStorage.setItem('vr_user', JSON.stringify(data.user));
+                return data.user;
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function loadEmployees() {
+            const select = document.getElementById('empSelect');
+            try {
+                const res = await fetch('/api/auth/employees');
+                const list = await res.json();
+                if (!list.length) {
+                    select.innerHTML = '<option value="" disabled selected>No employees yet</option>';
+                    document.getElementById('empHelp').textContent = 'No employees have been added yet. Ask the admin to create your account.';
+                    return;
+                }
+                select.innerHTML = '<option value="" disabled selected>Choose your name...</option>' +
+                    list.map(e => `<option value="${e.username}">${e.name} (${e.empId})</option>`).join('');
+            } catch (err) {
+                select.innerHTML = '<option value="" disabled selected>Could not load employees</option>';
+            }
+        }
+
+        async function handleEmployeeLogin(e) {
+            e.preventDefault();
+            try {
+                await login('/api/auth/employee', {
+                    username: document.getElementById('empSelect').value
+                }, document.getElementById('empBtn'));
+                window.location.href = 'employee.html';
+            } catch (err) {
+                showToast(err.message);
+            }
+        }
+
+        async function handleAdminLogin(e) {
+            e.preventDefault();
+            try {
+                await login('/api/auth/admin', {
+                    username: document.getElementById('adminUser').value.trim(),
+                    password: document.getElementById('adminPass').value
+                }, document.getElementById('adminBtn'));
+                showToast('Signed in. Opening the admin panel.', 'success');
+                setTimeout(() => { window.location.href = 'admin.html'; }, 300);
+            } catch (err) {
+                showToast(err.message);
+            }
+        }
+            window.onload = loadEmployees;
+    </script>
+</body>
+</html>
