@@ -1,7 +1,7 @@
 {
   "name": "vr-photography-pos",
-  "version": "5.0.0",
-  "description": "VR Photography Studio billing portal with two branches (Express + MongoDB)",
+  "version": "6.0.0",
+  "description": "VR Photography billing portal with two branches, advance orders and expenditure (Express + MongoDB)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
