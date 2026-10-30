@@ -14,6 +14,7 @@ const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin@vr';
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const TOKEN_TTL = '12h';
 const BRANCHES = ['Branch 1', 'Branch 2'];
+const EXPENSE_BRANCHES = ['General', ...BRANCHES];
 
 if (!MONGODB_URI) {
     console.error('Missing MONGODB_URI. Copy .env.example to .env and add your MongoDB connection string.');
@@ -37,15 +38,15 @@ const escapeRegex = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const httpErr = (status, message) => Object.assign(new Error(message), { status });
 const wrap = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 const TIMEZONE = process.env.TIMEZONE || 'Asia/Kolkata';
-const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: TIMEZONE }); // YYYY-MM-DD in studio time
+const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: TIMEZONE }); // YYYY-MM-DD in shop time
 const formatBillNo = seq => `VR-${new Date().getFullYear()}-${seq}`;
 
-// Accepts YYYY-MM-DD or DD-MM-YYYY and returns a valid YYYY-MM-DD (or null).
+// Accepts YYYY-MM-DD, DD-MM-YYYY or DD/MM/YYYY and returns a valid YYYY-MM-DD (or null).
 function parseDate(v) {
     const s = str(v, 10);
     let y, mo, d, m;
     if ((m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
-    else if ((m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(s))) { d = +m[1]; mo = +m[2]; y = +m[3]; }
+    else if ((m = /^(\d{2})[-/](\d{2})[-/](\d{4})$/.exec(s))) { d = +m[1]; mo = +m[2]; y = +m[3]; }
     else return null;
     const dt = new Date(Date.UTC(y, mo - 1, d));
     if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
@@ -56,6 +57,34 @@ function safeEqual(a, b) {
     const ha = crypto.createHash('sha256').update(String(a)).digest();
     const hb = crypto.createHash('sha256').update(String(b)).digest();
     return crypto.timingSafeEqual(ha, hb);
+}
+
+// Validates a Cash / GPay / Mixed payment for a given amount.
+function splitPayment(b, amount) {
+    const mode = str(b.paymentMode, 10);
+    if (!['Cash', 'GPay', 'Mixed'].includes(mode)) throw httpErr(400, 'Choose Cash, GPay or Mixed.');
+    let cash = 0, gpay = 0;
+    if (mode === 'Cash') cash = amount;
+    else if (mode === 'GPay') gpay = amount;
+    else {
+        cash = round2(num(b.cashAmount) || 0);
+        gpay = round2(num(b.gpayAmount) || 0);
+        if (cash < 0 || gpay < 0 || Math.abs(cash + gpay - amount) > 0.01) {
+            throw httpErr(400, 'Cash and GPay amounts must add up to the amount being paid.');
+        }
+    }
+    return { mode, cash, gpay };
+}
+
+// Date range filter on a YYYY-MM-DD string field.
+function dateRange(query) {
+    const from = parseDate(query.from);
+    const to = parseDate(query.to);
+    if (!from && !to) return null;
+    const r = {};
+    if (from) r.$gte = from;
+    if (to) r.$lte = to;
+    return r;
 }
 
 /* ------------------------------------------------------------------ */
@@ -109,10 +138,21 @@ const Event = mongoose.model('Event', new mongoose.Schema({
     details: { type: String, default: '' }
 }, { timestamps: true, toJSON }));
 
+const Expense = mongoose.model('Expense', new mongoose.Schema({
+    date: { type: String, required: true, index: true },       // YYYY-MM-DD
+    amount: { type: Number, required: true, min: 0 },
+    note: { type: String, default: '' },
+    branch: { type: String, enum: EXPENSE_BRANCHES, default: 'General' },
+    createdBy: String
+}, { timestamps: true, toJSON }));
+
 const Bill = mongoose.model('Bill', new mongoose.Schema({
     billNo: { type: String, required: true, unique: true },
-    date: { type: String, required: true, index: true },      // stored as YYYY-MM-DD, shown as DD-MM-YYYY
+    date: { type: String, required: true, index: true },      // YYYY-MM-DD. For advance orders this becomes the completion date
+    orderDate: String,                                          // date the order was first taken
     branch: { type: String, enum: BRANCHES, default: 'Branch 1', index: true },
+    // 'Advance' = balance still pending (hidden from sales). Old bills have no status and count as completed.
+    status: { type: String, enum: ['Completed', 'Advance'], default: 'Completed', index: true },
     billerUsername: String,
     billerEmpId: { type: String, index: true },
     billerName: String,
@@ -125,8 +165,19 @@ const Bill = mongoose.model('Bill', new mongoose.Schema({
     discount: Number,
     total: Number,
     paymentMode: { type: String, enum: ['Cash', 'GPay', 'Mixed'] },
-    cashAmount: { type: Number, default: 0 },
-    gpayAmount: { type: Number, default: 0 }
+    cashAmount: { type: Number, default: 0 },                  // money collected so far
+    gpayAmount: { type: Number, default: 0 },
+    // advance details
+    advance: { type: Number, default: 0 },
+    advanceMode: { type: String, enum: ['Cash', 'GPay', 'Mixed'] },
+    advanceCash: { type: Number, default: 0 },
+    advanceGpay: { type: Number, default: 0 },
+    balance: { type: Number, default: 0 },                     // total - advance
+    balanceMode: { type: String, enum: ['Cash', 'GPay', 'Mixed'] },
+    balanceCash: { type: Number, default: 0 },
+    balanceGpay: { type: Number, default: 0 },
+    completedAt: Date,
+    completedBy: String
 }, { timestamps: true, toJSON }));
 
 async function nextSeq(name) {
@@ -142,6 +193,8 @@ async function seed() {
     await Counter.updateOne({ _id: 'bill' }, { $setOnInsert: { seq: 1000 } }, { upsert: true });
     // Older bills (before branches existed) belong to Branch 1
     await Bill.updateMany({ branch: { $exists: false } }, { $set: { branch: 'Branch 1' } });
+    // Older bills (before advance orders existed) are completed sales
+    await Bill.updateMany({ status: { $exists: false } }, { $set: { status: 'Completed' } });
 }
 
 /* ------------------------------------------------------------------ */
@@ -395,44 +448,47 @@ app.post('/api/bills', auth(), wrap(async (req, res) => {
     if (discount > subtotal) throw httpErr(400, 'Discount cannot be more than the subtotal.');
     const total = round2(subtotal - discount);
 
-    const paymentMode = str(b.paymentMode, 10);
-    if (!['Cash', 'GPay', 'Mixed'].includes(paymentMode)) throw httpErr(400, 'Choose Cash, GPay or Mixed.');
-    let cashAmount = 0, gpayAmount = 0;
-    if (paymentMode === 'Cash') cashAmount = total;
-    else if (paymentMode === 'GPay') gpayAmount = total;
-    else {
-        cashAmount = round2(num(b.cashAmount) || 0);
-        gpayAmount = round2(num(b.gpayAmount) || 0);
-        if (cashAmount < 0 || gpayAmount < 0 || Math.abs(cashAmount + gpayAmount - total) > 0.01) {
-            throw httpErr(400, 'Cash and GPay amounts must add up to the bill total.');
-        }
+    // Advance: the customer pays part now, the rest later. The bill stays out of sales until it is completed.
+    const advance = round2(Math.max(0, num(b.advance) || 0));
+    const isAdvance = advance > 0;
+    if (isAdvance && advance >= total) {
+        throw httpErr(400, 'Advance must be less than the bill total. For a full payment, leave the advance empty.');
     }
+    const payNow = isAdvance ? advance : total;
+    const pay = splitPayment(b, payNow);
 
     const seq = await nextSeq('bill');
+    const date = parseDate(b.date) || todayStr();
     const bill = await Bill.create({
         billNo: formatBillNo(seq),
-        date: parseDate(b.date) || todayStr(),
+        date,
+        orderDate: date,
         branch,
+        status: isAdvance ? 'Advance' : 'Completed',
         // Biller comes from the login token, so it cannot be faked from the browser.
         billerUsername: req.user.username,
         billerEmpId: req.user.empId,
         billerName: req.user.name,
-        client, items, subtotal, discount, total, paymentMode, cashAmount, gpayAmount
+        client, items, subtotal, discount, total,
+        paymentMode: pay.mode, cashAmount: pay.cash, gpayAmount: pay.gpay,
+        advance: isAdvance ? advance : 0,
+        advanceMode: isAdvance ? pay.mode : undefined,
+        advanceCash: isAdvance ? pay.cash : 0,
+        advanceGpay: isAdvance ? pay.gpay : 0,
+        balance: isAdvance ? round2(total - advance) : 0,
+        completedAt: isAdvance ? undefined : new Date(),
+        completedBy: isAdvance ? undefined : req.user.username
     });
     res.status(201).json(bill);
 }));
 
+// Sales list: completed bills only. Advance orders live in /api/advances until they are paid in full.
 app.get('/api/bills', auth(), wrap(async (req, res) => {
-    const q = {};
+    const q = { status: { $ne: 'Advance' } };
     if (req.user.role !== 'admin') q.billerEmpId = req.user.empId;   // employees see only their own bills
     const { search, branch } = req.query;
-    const from = parseDate(req.query.from);
-    const to = parseDate(req.query.to);
-    if (from || to) {
-        q.date = {};
-        if (from) q.date.$gte = from;
-        if (to) q.date.$lte = to;
-    }
+    const range = dateRange(req.query);
+    if (range) q.date = range;
     if (BRANCHES.includes(branch)) q.branch = branch;
     if (search) {
         const rx = new RegExp(escapeRegex(str(search, 60)), 'i');
@@ -442,21 +498,108 @@ app.get('/api/bills', auth(), wrap(async (req, res) => {
     res.json(await Bill.find(q).sort({ createdAt: -1 }).limit(limit));
 }));
 
+// Advance orders waiting for the balance. Visible to every signed-in user so any counter can take the balance.
+app.get('/api/advances', auth(), wrap(async (req, res) => {
+    const q = { status: 'Advance' };
+    if (req.query.search) {
+        const rx = new RegExp(escapeRegex(str(req.query.search, 60)), 'i');
+        q.$or = [{ billNo: rx }, { 'client.name': rx }, { 'client.phone': rx }];
+    }
+    res.json(await Bill.find(q).sort({ createdAt: -1 }).limit(500));
+}));
+
+// Customer pays the remaining balance: the bill moves to sales.
+app.post('/api/bills/:id/complete', auth(), wrap(async (req, res) => {
+    const bill = await Bill.findById(req.params.id);
+    if (!bill) throw httpErr(404, 'Bill not found.');
+    if (bill.status !== 'Advance') throw httpErr(409, 'This bill is already paid in full.');
+
+    const balance = round2(bill.total - bill.advance);
+    const pay = splitPayment(req.body || {}, balance);
+    const cash = round2(bill.cashAmount + pay.cash);
+    const gpay = round2(bill.gpayAmount + pay.gpay);
+
+    const done = await Bill.findOneAndUpdate(
+        { _id: bill._id, status: 'Advance' },
+        { $set: {
+            status: 'Completed',
+            date: todayStr(),                       // sale is counted on the day it is paid in full
+            balance,
+            balanceMode: pay.mode, balanceCash: pay.cash, balanceGpay: pay.gpay,
+            cashAmount: cash, gpayAmount: gpay,
+            paymentMode: cash > 0 && gpay > 0 ? 'Mixed' : (cash > 0 ? 'Cash' : 'GPay'),
+            completedAt: new Date(), completedBy: req.user.username
+        } },
+        { new: true }
+    );
+    if (!done) throw httpErr(409, 'This bill is already paid in full.');
+    res.json(done);
+}));
+
+// Admin only: remove a pending advance order (for example a cancelled order).
+app.delete('/api/advances/:id', auth(['admin']), wrap(async (req, res) => {
+    const r = await Bill.deleteOne({ _id: req.params.id, status: 'Advance' });
+    if (!r.deletedCount) throw httpErr(404, 'Advance order not found.');
+    res.json({ ok: true });
+}));
+
+/* ------------------------------------------------------------------ */
+/*  EXPENDITURE (admin only)                                           */
+/* ------------------------------------------------------------------ */
+app.get('/api/expenses', auth(['admin']), wrap(async (req, res) => {
+    const q = {};
+    const range = dateRange(req.query);
+    if (range) q.date = range;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 100, 1000);
+    res.json(await Expense.find(q).sort({ date: -1, createdAt: -1 }).limit(limit));
+}));
+
+app.post('/api/expenses', auth(['admin']), wrap(async (req, res) => {
+    const amount = round2(num(req.body.amount));
+    const note = str(req.body.note, 200);
+    const branch = str(req.body.branch, 20) || 'General';
+    const date = parseDate(req.body.date) || todayStr();
+    if (!(amount > 0)) throw httpErr(400, 'Enter a valid expenditure amount.');
+    if (!EXPENSE_BRANCHES.includes(branch)) throw httpErr(400, 'Choose General, Branch 1 or Branch 2.');
+    res.status(201).json(await Expense.create({ date, amount, note, branch, createdBy: req.user.username }));
+}));
+
+app.delete('/api/expenses/:id', auth(['admin']), wrap(async (req, res) => {
+    await Expense.findByIdAndDelete(req.params.id);
+    res.json({ ok: true });
+}));
+
+/* ------------------------------------------------------------------ */
+/*  STATS + CUSTOM REPORT (admin only)                                 */
+/* ------------------------------------------------------------------ */
+const SALES = { status: { $ne: 'Advance' } };   // completed bills only
+
 app.get('/api/stats', auth(['admin']), wrap(async (_req, res) => {
+    const today = todayStr();
     const group = { _id: null, revenue: { $sum: '$total' }, count: { $sum: 1 }, cash: { $sum: '$cashAmount' }, gpay: { $sum: '$gpayAmount' } };
     const branchGroup = { _id: { $ifNull: ['$branch', 'Branch 1'] }, revenue: { $sum: '$total' }, count: { $sum: 1 } };
-    const [all] = await Bill.aggregate([{ $group: group }]);
-    const [today] = await Bill.aggregate([{ $match: { date: todayStr() } }, { $group: group }]);
+    const expGroup = { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } };
+
+    const [all] = await Bill.aggregate([{ $match: SALES }, { $group: group }]);
+    const [todayAgg] = await Bill.aggregate([{ $match: { ...SALES, date: today } }, { $group: group }]);
     const byEmployee = await Bill.aggregate([
+        { $match: SALES },
         { $group: { _id: '$billerEmpId', name: { $last: '$billerUsername' }, revenue: { $sum: '$total' }, count: { $sum: 1 } } },
         { $sort: { revenue: -1 } }
     ]);
-    const branchAll = await Bill.aggregate([{ $group: branchGroup }]);
-    const branchToday = await Bill.aggregate([{ $match: { date: todayStr() } }, { $group: branchGroup }]);
+    const branchAll = await Bill.aggregate([{ $match: SALES }, { $group: branchGroup }]);
+    const branchToday = await Bill.aggregate([{ $match: { ...SALES, date: today } }, { $group: branchGroup }]);
+    const [expAll] = await Expense.aggregate([{ $group: expGroup }]);
+    const [expToday] = await Expense.aggregate([{ $match: { date: today } }, { $group: expGroup }]);
+    const advancePending = await Bill.aggregate([
+        { $match: { status: 'Advance' } },
+        { $group: { _id: null, count: { $sum: 1 }, due: { $sum: '$balance' } } }
+    ]);
+
     const empty = { revenue: 0, count: 0, cash: 0, gpay: 0 };
     res.json({
         all: all || empty,
-        today: today || empty,
+        today: todayAgg || empty,
         byEmployee: byEmployee.map(e => ({ empId: e._id, name: e.name, revenue: e.revenue, count: e.count })),
         byBranch: BRANCHES.map(name => {
             const a = branchAll.find(x => x._id === name) || {};
@@ -467,7 +610,40 @@ app.get('/api/stats', auth(['admin']), wrap(async (_req, res) => {
                 todayRevenue: t.revenue || 0, todayCount: t.count || 0
             };
         }),
+        expenditure: {
+            total: expAll?.total || 0, count: expAll?.count || 0,
+            today: expToday?.total || 0, todayCount: expToday?.count || 0
+        },
+        advancePending: { count: advancePending[0]?.count || 0, due: advancePending[0]?.due || 0 },
         activeEmployees: await Employee.countDocuments({ active: true })
+    });
+}));
+
+// Revenue and expenditure for any date range (and optional branch), shown separately.
+app.get('/api/report', auth(['admin']), wrap(async (req, res) => {
+    const range = dateRange(req.query);
+    const branch = BRANCHES.includes(req.query.branch) ? req.query.branch : null;
+
+    const billMatch = { ...SALES };
+    const expMatch = {};
+    if (range) { billMatch.date = range; expMatch.date = range; }
+    if (branch) { billMatch.branch = branch; expMatch.branch = branch; }
+
+    const [rev] = await Bill.aggregate([
+        { $match: billMatch },
+        { $group: { _id: null, revenue: { $sum: '$total' }, count: { $sum: 1 }, cash: { $sum: '$cashAmount' }, gpay: { $sum: '$gpayAmount' } } }
+    ]);
+    const [exp] = await Expense.aggregate([
+        { $match: expMatch },
+        { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+    ]);
+    const revenue = round2(rev?.revenue || 0);
+    const expenditure = round2(exp?.total || 0);
+    res.json({
+        from: parseDate(req.query.from), to: parseDate(req.query.to), branch,
+        revenue, count: rev?.count || 0, cash: round2(rev?.cash || 0), gpay: round2(rev?.gpay || 0),
+        expenditure, expenseCount: exp?.count || 0,
+        net: round2(revenue - expenditure)
     });
 }));
 
