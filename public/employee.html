@@ -11,29 +11,34 @@
         .font-serif-studio { font-family: 'Playfair Display', serif; }
 
         @media print {
-            @page { size: A4; margin: 12mm; }
-            body { background: #ffffff !important; }
+            /* margin 0 removes the browser's own header (page title, date) and footer (web address) */
+            @page { size: A4; margin: 0; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            html, body { background: #ffffff !important; height: auto !important; overflow: visible !important; display: block !important; }
             .no-print { display: none !important; }
             #designer-pdf-invoice {
                 display: block !important;
                 visibility: visible !important;
                 position: static !important;
                 width: 100% !important;
-                border: 2px solid #0f172a !important;
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 10mm !important;
             }
+            .inv-card { break-inside: avoid; }
         }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
 
-    <div id="toast-container" class="fixed top-5 right-5 z-[60] flex flex-col gap-2 no-print"></div>
+    <div id="toast-container" class="fixed top-5 right-5 z-[70] flex flex-col gap-2 no-print"></div>
 
     <!-- Header -->
     <header class="bg-slate-900 text-white px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 shadow-md no-print">
         <div class="flex items-center gap-3">
             <div class="w-9 h-9 rounded-lg bg-amber-500 text-slate-950 font-bold flex items-center justify-center">VR</div>
             <div>
-                <h1 class="font-bold text-base leading-none">VR PHOTOGRAPHY STUDIO</h1>
+                <h1 class="font-bold text-base leading-none">VR PHOTOGRAPHY</h1>
                 <span class="text-[11px] text-amber-400">Employee billing counter</span>
             </div>
         </div>
@@ -41,7 +46,7 @@
             <div class="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
                 <span class="text-xs text-slate-400">Biller:</span>
                 <span id="billerNameLabel" class="text-amber-400 font-semibold text-xs">...</span>
-                <span id="billerEmpIdBadge" class="text-[10px] bg-slate-950 text-slate-300 px-2 py-0.5 rounded font-mono">-</span>
+                <span id="billerBranchBadge" class="text-[10px] bg-slate-950 text-slate-300 px-2 py-0.5 rounded font-mono">-</span>
             </div>
             <a id="adminLink" href="admin.html" class="hidden text-xs bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded-lg text-white">Back to admin panel</a>
             <a href="index.html" onclick="sessionStorage.clear()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-lg border border-slate-700 text-slate-300">Log out</a>
@@ -55,15 +60,15 @@
             <div class="flex flex-wrap items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-100">
                 <div>
                     <h2 class="text-base font-bold text-slate-800">Customer details</h2>
-                    <p class="text-xs text-slate-500">Your employee ID and the branch are added to every invoice automatically.</p>
+                    <p class="text-xs text-slate-500">Your name and the branch are added to every invoice automatically.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
-                    <div>
-                        <span class="text-[11px] font-semibold text-slate-500 block mb-1">Branch *</span>
-                        <div class="flex gap-1 p-1 bg-slate-100 rounded-lg">
-                            <button type="button" id="branch-btn-1" onclick="setBranch('Branch 1')" class="px-4 py-1.5 rounded-md text-xs font-bold">Branch 1</button>
-                            <button type="button" id="branch-btn-2" onclick="setBranch('Branch 2')" class="px-4 py-1.5 rounded-md text-xs font-bold">Branch 2</button>
-                        </div>
+                    <div class="bg-slate-900 px-4 py-1.5 rounded-lg">
+                        <span class="text-[11px] font-semibold text-slate-400 block">Branch</span>
+                        <span class="flex items-center gap-2">
+                            <span id="branchLabel" class="font-bold text-sm text-amber-400">-</span>
+                            <button type="button" id="changeBranchBtn" onclick="openBranchPick()" class="hidden text-[11px] text-slate-300 underline">Change</button>
+                        </span>
                     </div>
                     <div class="bg-amber-50 border border-amber-200 px-4 py-1.5 rounded-lg">
                         <span class="text-[11px] font-semibold text-amber-700 block">Next bill number</span>
@@ -81,9 +86,9 @@
                     <input type="tel" id="clientPhone" placeholder="10-digit mobile number" class="w-full border border-slate-300 rounded-lg px-3.5 py-2 text-sm">
                 </div>
                 <div>
-                    <label for="billDate" class="block text-xs font-semibold text-slate-700 mb-1">Date (DD-MM-YYYY) *</label>
+                    <label for="billDate" class="block text-xs font-semibold text-slate-700 mb-1">Date (DD/MM/YYYY) *</label>
                     <div class="relative">
-                        <input type="text" id="billDate" inputmode="numeric" maxlength="10" placeholder="DD-MM-YYYY" oninput="maskDate(this)" class="w-full border border-slate-300 rounded-lg pl-3.5 pr-10 py-2 text-sm">
+                        <input type="text" id="billDate" inputmode="numeric" maxlength="10" placeholder="DD/MM/YYYY" oninput="maskDate(this)" class="w-full border border-slate-300 rounded-lg pl-3.5 pr-10 py-2 text-sm">
                         <button type="button" onclick="openPicker('billDate')" aria-label="Pick a date" class="absolute right-2 top-1/2 -translate-y-1/2 text-base">📅</button>
                         <input type="date" id="billDate_picker" tabindex="-1" onchange="pickerChanged('billDate')" class="absolute inset-0 opacity-0 pointer-events-none">
                     </div>
@@ -172,7 +177,7 @@
                         <div>
                             <label for="shootType" class="block text-xs font-semibold text-amber-900 mb-1">Shoot type</label>
                             <select id="shootType" onchange="populateShoots()" class="w-full border border-amber-300 rounded-lg px-3 py-2.5 text-sm bg-white font-medium">
-                                <option value="Indoor">Indoor shoot (in studio)</option>
+                                <option value="Indoor">Indoor shoot</option>
                                 <option value="Outdoor">Outdoor shoot (on location)</option>
                             </select>
                         </div>
@@ -243,7 +248,7 @@
                             <th class="px-4 py-3 border-b">Details / notes</th>
                             <th class="px-4 py-3 border-b text-center">Qty</th>
                             <th class="px-4 py-3 border-b text-right">Total</th>
-                            <th class="px-4 py-3 border-b text-center">Remove</th>
+                            <th class="px-4 py-3 border-b text-center">Action</th>
                         </tr>
                     </thead>
                     <tbody id="cartBody" class="divide-y divide-slate-100"></tbody>
@@ -252,7 +257,7 @@
 
             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
                 <div class="space-y-3">
-                    <h3 class="text-sm font-bold text-slate-800 border-b pb-2">Summary</h3>
+                    <h3 class="text-sm font-bold text-slate-800 border-b pb-2">Bill summary</h3>
                     <div class="flex justify-between text-sm">
                         <span class="text-slate-500">Subtotal</span>
                         <span id="subtotalLabel" class="font-semibold">₹0.00</span>
@@ -265,11 +270,48 @@
                         <span class="font-bold text-base">Net payable</span>
                         <span id="totalLabel" class="text-2xl font-extrabold text-amber-600">₹0.00</span>
                     </div>
+                    <div class="pt-3 border-t border-dashed">
+                        <div class="flex justify-between items-center text-sm">
+                            <label for="billAdvance" class="text-slate-700 font-semibold">Advance (₹)</label>
+                            <input type="number" id="billAdvance" value="0" min="0" oninput="updateTotals()" class="w-24 text-right border border-amber-400 rounded-lg px-2 py-1 font-bold">
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">Leave 0 for a full payment. With an advance, the bill waits in Advance orders until the balance is paid.</p>
+                        <div id="balanceRow" class="hidden flex justify-between text-sm mt-2">
+                            <span class="text-slate-500">Balance due later</span>
+                            <span id="balanceLabel" class="font-bold text-rose-600">₹0.00</span>
+                        </div>
+                    </div>
                 </div>
-                <button type="button" onclick="openCheckout()" class="mt-6 w-full bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold rounded-xl py-3.5 text-sm shadow-lg">
+                <button type="button" id="checkoutBtn" onclick="openCheckout()" class="mt-6 w-full bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold rounded-xl py-3.5 text-sm shadow-lg">
                     Choose payment mode
                 </button>
             </div>
+        </div>
+
+        <!-- Advance orders -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+            <div class="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h3 class="font-bold text-sm text-slate-800">Advance orders</h3>
+                    <p id="advSummary" class="text-xs text-slate-500"></p>
+                </div>
+                <input type="search" id="advSearch" oninput="debouncedAdv()" placeholder="Search bill no, name or phone" class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-60">
+            </div>
+            <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-xs">
+                        <th class="px-4 py-3 border-b">Bill no</th>
+                        <th class="px-4 py-3 border-b">Order date</th>
+                        <th class="px-4 py-3 border-b">Branch</th>
+                        <th class="px-4 py-3 border-b">Customer</th>
+                        <th class="px-4 py-3 border-b text-right">Total</th>
+                        <th class="px-4 py-3 border-b">Advance paid (how)</th>
+                        <th class="px-4 py-3 border-b text-right">Balance</th>
+                        <th class="px-4 py-3 border-b text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="advBody" class="divide-y divide-slate-100"></tbody>
+            </table>
         </div>
 
         <!-- My recent bills -->
@@ -295,6 +337,18 @@
         </div>
     </main>
 
+    <!-- Branch picker (only shown if no branch was chosen at login) -->
+    <div id="branchModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm no-print" role="dialog" aria-modal="true">
+        <div class="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6">
+            <h3 class="text-lg font-bold text-slate-900">Which branch are you at?</h3>
+            <p class="text-xs text-slate-500 mt-1">Every invoice will carry this branch.</p>
+            <div class="grid grid-cols-2 gap-3 mt-5">
+                <button type="button" onclick="pickBranch('Branch 1')" class="rounded-xl border border-slate-300 hover:border-slate-900 hover:bg-amber-50 py-4 text-center"><span class="block text-xl font-bold text-slate-900">B1</span><span class="block text-xs text-slate-500">Branch 1</span></button>
+                <button type="button" onclick="pickBranch('Branch 2')" class="rounded-xl border border-slate-300 hover:border-slate-900 hover:bg-amber-50 py-4 text-center"><span class="block text-xl font-bold text-slate-900">B2</span><span class="block text-xs text-slate-500">Branch 2</span></button>
+            </div>
+        </div>
+    </div>
+
     <!-- Payment modal -->
     <div id="paymentModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4 no-print">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5">
@@ -304,9 +358,10 @@
             </div>
             <div class="bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center">
                 <div>
-                    <span class="text-xs text-slate-400 block">Customer pays</span>
+                    <span id="modalPayLabel" class="text-xs text-slate-400 block">Customer pays</span>
                     <span id="modalCustomer" class="text-xs text-amber-400 font-medium"></span>
                     <span id="modalBranch" class="text-[11px] text-slate-300 block"></span>
+                    <span id="modalBalance" class="text-[11px] text-rose-300 block"></span>
                 </div>
                 <span id="modalTotal" class="text-2xl font-extrabold text-amber-400">₹0.00</span>
             </div>
@@ -332,81 +387,173 @@
         </div>
     </div>
 
+    <!-- Pay balance modal -->
+    <div id="completeModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5">
+            <div class="flex justify-between items-start border-b pb-3">
+                <h3 class="text-lg font-bold text-slate-900">Pay balance completely</h3>
+                <button onclick="closeComplete()" aria-label="Close" class="text-slate-400 hover:text-slate-700 text-xl font-bold">×</button>
+            </div>
+            <div class="bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center">
+                <div>
+                    <span class="text-xs text-slate-400 block">Balance to collect</span>
+                    <span id="cmpCustomer" class="text-xs text-amber-400 font-medium"></span>
+                    <span id="cmpInfo" class="text-[11px] text-slate-300 block"></span>
+                </div>
+                <span id="cmpBalance" class="text-2xl font-extrabold text-amber-400">₹0.00</span>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+                <button type="button" onclick="selectCmpPay('Cash')" id="cmp-btn-Cash" class="rounded-xl py-3 px-2 text-center font-bold text-xs flex flex-col items-center gap-1"><span class="text-lg">💵</span><span>Cash</span></button>
+                <button type="button" onclick="selectCmpPay('GPay')" id="cmp-btn-GPay" class="rounded-xl py-3 px-2 text-center font-bold text-xs flex flex-col items-center gap-1"><span class="text-lg">📱</span><span>GPay (UPI)</span></button>
+                <button type="button" onclick="selectCmpPay('Mixed')" id="cmp-btn-Mixed" class="rounded-xl py-3 px-2 text-center font-bold text-xs flex flex-col items-center gap-1"><span class="text-lg">⚖️</span><span>Mixed</span></button>
+            </div>
+            <div id="cmpMixedBox" class="hidden bg-slate-50 p-4 rounded-xl border grid grid-cols-2 gap-3">
+                <div>
+                    <label for="cmpMixCash" class="block text-xs font-semibold text-slate-600 mb-1">Cash (₹)</label>
+                    <input type="number" id="cmpMixCash" min="0" oninput="syncCmpMixed('cash')" class="w-full border rounded-lg px-3 py-2 text-sm font-bold">
+                </div>
+                <div>
+                    <label for="cmpMixGpay" class="block text-xs font-semibold text-slate-600 mb-1">GPay (₹)</label>
+                    <input type="number" id="cmpMixGpay" min="0" oninput="syncCmpMixed('gpay')" class="w-full border rounded-lg px-3 py-2 text-sm font-bold text-blue-600">
+                </div>
+            </div>
+            <button type="button" id="cmpFinishBtn" onclick="finalizeComplete()" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white font-bold rounded-xl py-3.5 text-sm shadow-lg">
+                Collect balance and move to sales
+            </button>
+            <button type="button" onclick="closeComplete()" class="w-full text-xs text-slate-500 hover:text-slate-800 py-1">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Edit bill item modal -->
+    <div id="editItemModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-base text-slate-900">Edit bill item</h3>
+                <button onclick="closeEditItem()" aria-label="Close" class="text-slate-400 hover:text-slate-700 text-xl font-bold">×</button>
+            </div>
+            <form onsubmit="saveCartEdit(event)" class="space-y-4">
+                <input type="hidden" id="editCartId">
+                <div>
+                    <label for="editCartTitle" class="block text-xs font-semibold text-slate-700 mb-1">Item name *</label>
+                    <input type="text" id="editCartTitle" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label for="editCartDetails" class="block text-xs font-semibold text-slate-700 mb-1">Details / notes</label>
+                    <input type="text" id="editCartDetails" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="editCartQty" class="block text-xs font-semibold text-slate-700 mb-1">Quantity *</label>
+                        <input type="number" id="editCartQty" min="1" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label for="editCartPrice" class="block text-xs font-semibold text-slate-700 mb-1">Price (₹) *</label>
+                        <input type="number" id="editCartPrice" min="0" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold">
+                    </div>
+                </div>
+                <p id="editCartHint" class="text-[11px] text-slate-400 hidden">Catalog prices are set by the admin. Ask the admin if the price needs to change.</p>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeEditItem()" class="px-4 py-2 rounded-lg border text-xs font-semibold text-slate-600">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-lg bg-slate-900 text-amber-400 text-xs font-bold">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Bill saved modal -->
     <div id="doneModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4 no-print">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4 text-center">
             <div class="w-12 h-12 mx-auto rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl">✓</div>
             <div>
-                <h3 class="text-lg font-bold text-slate-900">Bill saved</h3>
+                <h3 id="doneTitle" class="text-lg font-bold text-slate-900">Bill saved</h3>
                 <p id="doneInfo" class="text-sm text-slate-500 mt-1"></p>
             </div>
-            <button type="button" onclick="sendWhatsApp(lastBill)" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl py-3 text-sm">Send invoice on WhatsApp</button>
-            <button type="button" onclick="printBill(lastBill)" class="w-full border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl py-2.5 text-sm">Print invoice again</button>
+            <button type="button" onclick="sendWhatsApp(lastBill)" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl py-3 text-sm">Send on WhatsApp</button>
+            <button type="button" onclick="printBill(lastBill)" class="w-full border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl py-2.5 text-sm">Print again</button>
             <button type="button" onclick="closeDone()" class="w-full text-sm text-slate-500 hover:text-slate-800 py-1">Start next bill</button>
         </div>
     </div>
 
     <!-- Printable invoice -->
-    <div id="designer-pdf-invoice" class="hidden bg-white text-slate-900 p-8 max-w-3xl mx-auto">
-        <div class="border-b-2 border-slate-900 pb-5 flex justify-between items-start">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-slate-900 text-amber-400 flex items-center justify-center font-extrabold text-lg">VR</div>
+    <div id="designer-pdf-invoice" class="hidden bg-white text-slate-900 max-w-3xl mx-auto">
+        <div class="inv-card border-2 border-slate-900 p-7">
+            <div class="border-b-2 border-slate-900 pb-5 flex justify-between items-start gap-6">
                 <div>
-                    <h1 class="font-serif-studio text-2xl font-bold tracking-wide">VR PHOTOGRAPHY STUDIO</h1>
-                    <p class="text-xs text-slate-600 font-medium">Custom frames, passport photos, indoor and outdoor shoots, wedding and event coverage</p>
+                    <h1 class="font-serif-studio text-3xl font-bold tracking-wide whitespace-nowrap">VR PHOTOGRAPHY</h1>
+                    <p class="text-[11px] text-slate-500 mt-1">Events, Photography</p>
+                </div>
+                <div class="text-right">
+                    <span id="pdfDocType" class="inline-block bg-slate-900 text-white text-xs font-bold px-3 py-1 rounded">Tax Invoice</span>
+                    <p id="pdfBillNo" class="text-sm font-extrabold mt-2 whitespace-nowrap"></p>
+                    <p id="pdfBillDate" class="text-xs text-slate-600 whitespace-nowrap"></p>
+                    <p id="pdfOrderDate" class="text-[11px] text-slate-500 whitespace-nowrap hidden"></p>
                 </div>
             </div>
-            <div class="text-right">
-                <span class="inline-block bg-slate-900 text-white text-xs font-bold px-3 py-1 rounded">Tax Invoice</span>
-                <p id="pdfBillNo" class="text-sm font-extrabold mt-2"></p>
-                <p id="pdfBillDate" class="text-xs text-slate-600"></p>
+            <div class="grid grid-cols-2 gap-6 py-5 border-b border-slate-200 text-xs">
+                <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-1">
+                    <p class="text-[10px] font-bold text-slate-400">Representative</p>
+                    <p class="font-bold">Studio: <span class="font-normal">VR Photography</span></p>
+                    <p class="font-bold">Biller name: <span id="pdfBillerName" class="font-normal"></span></p>
+                    <p class="font-bold">Employee name: <span id="pdfEmployeeName" class="font-normal"></span></p>
+                    <p class="font-bold">Branch: <span id="pdfBranch" class="font-normal"></span></p>
+                </div>
+                <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-1">
+                    <p class="text-[10px] font-bold text-slate-400">Billed to</p>
+                    <p class="font-bold">Client name: <span id="pdfClientName" class="font-normal"></span></p>
+                    <p class="font-bold">Mobile number: <span id="pdfClientPhone" class="font-normal"></span></p>
+                    <p class="font-bold">Address: <span id="pdfClientAddress" class="font-normal"></span></p>
+                </div>
             </div>
-        </div>
-        <div class="grid grid-cols-2 gap-6 py-5 border-b border-slate-200 text-xs">
-            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-1">
-                <p class="text-[10px] font-bold text-slate-400">Studio representative</p>
-                <p class="font-bold">Biller name: <span id="pdfBillerName" class="font-normal"></span></p>
-                <p class="font-bold">Employee ID: <span id="pdfEmployeeId" class="font-normal"></span></p>
-                <p class="font-bold">Branch: <span id="pdfBranch" class="font-normal"></span></p>
+            <div class="my-6">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-900 text-white">
+                            <th class="py-2.5 px-3">#</th>
+                            <th class="py-2.5 px-3">Item / shoot / package</th>
+                            <th class="py-2.5 px-3">Category</th>
+                            <th class="py-2.5 px-3">Specifications / notes</th>
+                            <th class="py-2.5 px-3 text-center">Qty</th>
+                            <th class="py-2.5 px-3 text-right">Rate</th>
+                            <th class="py-2.5 px-3 text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pdfItemsBody" class="divide-y divide-slate-200"></tbody>
+                </table>
             </div>
-            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-1">
-                <p class="text-[10px] font-bold text-slate-400">Billed to</p>
-                <p class="font-bold">Client name: <span id="pdfClientName" class="font-normal"></span></p>
-                <p class="font-bold">Mobile number: <span id="pdfClientPhone" class="font-normal"></span></p>
-                <p class="font-bold">Address: <span id="pdfClientAddress" class="font-normal"></span></p>
+            <div class="grid grid-cols-2 gap-6 items-end pt-4 border-t-2 border-slate-900">
+                <div class="text-xs space-y-1.5">
+                    <p class="font-bold">Payment mode: <span id="pdfPaymentBadge" class="font-semibold text-blue-700"></span></p>
+                    <p class="text-slate-500 text-[11px]">Thank you for choosing VR Photography! Goods and frames once sold will be serviced as per policy.</p>
+                    <div class="pt-8"><p class="text-[11px] font-bold text-slate-700 border-t border-slate-300 inline-block pt-1 px-6">Authorized signatory</p></div>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
+                    <div class="flex justify-between text-slate-600"><span>Subtotal:</span><span id="pdfSubtotal" class="font-bold"></span></div>
+                    <div class="flex justify-between text-slate-600"><span>Discount:</span><span id="pdfDiscount" class="font-bold text-rose-600"></span></div>
+                    <div class="flex justify-between text-base font-extrabold text-slate-900 pt-2 border-t border-slate-300"><span>Grand total:</span><span id="pdfGrandTotal"></span></div>
+                    <div id="pdfAdvRows" class="hidden pt-2 border-t border-dashed border-slate-300 space-y-1.5">
+                        <div class="flex justify-between text-slate-600"><span>Advance paid:</span><span id="pdfAdvance" class="font-bold"></span></div>
+                        <div class="flex justify-between text-slate-900 font-bold"><span id="pdfBalanceLabel">Balance due:</span><span id="pdfBalance"></span></div>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="my-6">
-            <table class="w-full text-left border-collapse text-xs">
-                <thead>
-                    <tr class="bg-slate-900 text-white">
-                        <th class="py-2.5 px-3">#</th>
-                        <th class="py-2.5 px-3">Item / shoot / package</th>
-                        <th class="py-2.5 px-3">Category</th>
-                        <th class="py-2.5 px-3">Specifications / notes</th>
-                        <th class="py-2.5 px-3 text-center">Qty</th>
-                        <th class="py-2.5 px-3 text-right">Rate</th>
-                        <th class="py-2.5 px-3 text-right">Total</th>
-                    </tr>
-                </thead>
-                <tbody id="pdfItemsBody" class="divide-y divide-slate-200"></tbody>
-            </table>
-        </div>
-        <div class="grid grid-cols-2 gap-6 items-end pt-4 border-t-2 border-slate-900">
-            <div class="text-xs space-y-1.5">
-                <p class="font-bold">Payment mode: <span id="pdfPaymentBadge" class="font-semibold text-blue-700"></span></p>
-                <p class="text-slate-500 text-[11px]">Thank you for choosing VR Photography Studio! Goods and frames once sold will be serviced as per studio policy.</p>
-                <div class="pt-8"><p class="text-[11px] font-bold text-slate-700 border-t border-slate-300 inline-block pt-1 px-6">Authorized signatory</p></div>
-            </div>
-            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
-                <div class="flex justify-between text-slate-600"><span>Subtotal:</span><span id="pdfSubtotal" class="font-bold"></span></div>
-                <div class="flex justify-between text-slate-600"><span>Discount:</span><span id="pdfDiscount" class="font-bold text-rose-600"></span></div>
-                <div class="flex justify-between text-base font-extrabold text-slate-900 pt-2 border-t border-slate-300"><span>Grand total:</span><span id="pdfGrandTotal"></span></div>
+            <div class="mt-6 pt-4 border-t border-slate-300 text-center text-[11px] text-slate-600 space-y-1">
+                <p id="pdfTagline" class="font-semibold text-slate-700"></p>
+                <p id="pdfShopPhone"></p>
+                <p id="pdfShopAddress"></p>
+                <p id="pdfShopEmail"></p>
             </div>
         </div>
     </div>
 
     <script>
+        /* ---------- shop details printed on every invoice ---------- */
+        const SHOP = {
+            tagline: 'Custom frames, passport photos, indoor and outdoor shoots, wedding and event coverage',
+            phone: '+91 90254 30044',
+            email: 'vrphotography34@gmail.com',
+            address: ''          // <-- type your shop address here, e.g. '12, Main Road, Chennai - 600001'
+        };
+
         /* ---------- helpers ---------- */
         const ADMIN_PAGE = false;               // employees cannot change catalog prices
         const CUSTOM = '__custom__';
@@ -417,11 +564,12 @@
         const fmt = n => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const todayLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
         const customOpt = `<option value="${CUSTOM}">Other (type manually)</option>`;
+        const branchShort = b => 'B' + ((String(b || '').match(/\d+/) || ['1'])[0]);
 
-        /* ---------- dates: always shown as DD-MM-YYYY ---------- */
-        const fmtDate = iso => /^\d{4}-\d{2}-\d{2}/.test(iso || '') ? iso.slice(0, 10).split('-').reverse().join('-') : (iso || '');
+        /* ---------- dates: always shown as DD/MM/YYYY ---------- */
+        const fmtDate = iso => /^\d{4}-\d{2}-\d{2}/.test(iso || '') ? iso.slice(0, 10).split('-').reverse().join('/') : (iso || '');
         function parseDMY(s) {
-            const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(String(s || '').trim());
+            const m = /^(\d{2})[\/-](\d{2})[\/-](\d{4})$/.exec(String(s || '').trim());
             if (!m) return null;
             const d = +m[1], mo = +m[2], y = +m[3];
             const dt = new Date(Date.UTC(y, mo - 1, d));
@@ -430,8 +578,8 @@
         }
         function maskDate(el) {
             const d = el.value.replace(/\D/g, '').slice(0, 8);
-            el.value = d.length > 4 ? `${d.slice(0, 2)}-${d.slice(2, 4)}-${d.slice(4)}`
-                : d.length > 2 ? `${d.slice(0, 2)}-${d.slice(2)}` : d;
+            el.value = d.length > 4 ? `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`
+                : d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
         }
         function openPicker(id) {
             const p = $(id + '_picker');
@@ -467,10 +615,13 @@
             $('toast-container').appendChild(el);
             setTimeout(() => el.remove(), 3500);
         }
+        const openModal = id => { $(id).classList.remove('hidden'); $(id).classList.add('flex'); };
+        const closeModal = id => { $(id).classList.add('hidden'); $(id).classList.remove('flex'); };
 
         /* ---------- state ---------- */
         let me = null, master = { catalog: [], passports: [], shoots: [], events: [] };
-        let category = 'Frame', cart = [], payMode = 'Cash', lastBill = null, myBills = [], branch = 'Branch 1';
+        let category = 'Frame', cart = [], payMode = 'Cash', lastBill = null, myBills = [], advances = [], branch = null;
+        let completing = null, cmpMode = 'Cash';
 
         /* ---------- init ---------- */
         window.onload = async () => {
@@ -480,31 +631,34 @@
                 master = await api('/master');
             } catch (e) { return; }
             $('billerNameLabel').textContent = me.name;
-            $('billerEmpIdBadge').textContent = me.empId;
-            if (me.role === 'admin') $('adminLink').classList.remove('hidden');
+            if (me.role === 'admin') {
+                $('adminLink').classList.remove('hidden');
+                $('changeBranchBtn').classList.remove('hidden');
+            }
             $('billDate').value = fmtDate(todayLocal());
-            try { const b = localStorage.getItem('vr_branch'); if (BRANCHES.includes(b)) branch = b; } catch (e) {}
-            setBranch(branch);
+            const saved = sessionStorage.getItem('vr_branch');
+            if (BRANCHES.includes(saved)) setBranch(saved); else openBranchPick();
             setCategory('Frame');
             renderCart();
             refreshBillNo();
             loadMyBills();
+            loadAdvances();
         };
 
         async function refreshBillNo() {
             try { $('billNoInput').value = (await api('/bills/next-number')).billNo; } catch (e) {}
         }
 
-        /* ---------- branch ---------- */
+        /* ---------- branch (chosen on the login page) ---------- */
         function setBranch(b) {
             branch = b;
-            try { localStorage.setItem('vr_branch', b); } catch (e) {}
-            BRANCHES.forEach((name, i) => {
-                $('branch-btn-' + (i + 1)).className = 'px-4 py-1.5 rounded-md text-xs font-bold ' +
-                    (name === b ? 'bg-slate-900 text-amber-400 shadow' : 'text-slate-600 hover:bg-slate-200');
-            });
+            sessionStorage.setItem('vr_branch', b);
+            $('branchLabel').textContent = b;
+            $('billerBranchBadge').textContent = branchShort(b);
             $('cartBranchTag').textContent = b;
         }
+        function openBranchPick() { openModal('branchModal'); }
+        function pickBranch(b) { setBranch(b); closeModal('branchModal'); }
 
         /* ---------- category + selectors ---------- */
         const isCustom = id => $(id).value === CUSTOM;
@@ -610,6 +764,7 @@
         }
 
         /* ---------- cart ---------- */
+        // locked = price comes from the admin's catalog, so employees cannot change it when editing
         function addItem(e) {
             e.preventDefault();
             if (category === 'Frame' || category === 'Product') {
@@ -620,13 +775,13 @@
                     if (!name) return toast('Type the item name.', 'error');
                     if (!(price >= 0)) return toast('Enter the price.', 'error');
                     const size = $('customSize').value.trim();
-                    cart.push({ id: Date.now(), title: name, category, details: size ? `Size: ${size}` : 'Custom item', qty, price });
+                    cart.push({ id: Date.now(), title: name, category, details: size ? `Size: ${size}` : 'Custom item', qty, price, locked: false });
                     $('customName').value = ''; $('customSize').value = ''; $('unitPrice').value = '';
                 } else {
                     const item = master.catalog.find(i => i.id === $('itemSelect').value);
                     const v = item?.variants[parseInt($('variantSelect').value, 10)];
                     if (!item || !v) return toast('Choose an item and size first.', 'error');
-                    cart.push({ id: Date.now(), title: item.name, category, details: `Size: ${v.size}`, qty, price: v.price });
+                    cart.push({ id: Date.now(), title: item.name, category, details: `Size: ${v.size}`, qty, price: v.price, locked: !ADMIN_PAGE });
                 }
                 $('itemQty').value = 1;
             } else if (category === 'Passport') {
@@ -640,7 +795,7 @@
                     if (!title) return toast('Type the passport package name.', 'error');
                 } else title = p ? p.name : 'Passport photos';
                 const note = $('passportComment').value.trim() || (!isCustom('passportSelect') && p?.details) || 'Passport size photos';
-                cart.push({ id: Date.now(), title, category: 'Passport', details: note, qty, price: amount });
+                cart.push({ id: Date.now(), title, category: 'Passport', details: note, qty, price: amount, locked: false });
                 $('passportComment').value = ''; $('passportQty').value = 1;
                 if (isCustom('passportSelect')) { $('passportCustomName').value = ''; $('passportAmount').value = ''; }
             } else if (category === 'Shoot') {
@@ -656,7 +811,7 @@
                     title = s ? s.name : `${type} shoot`;
                 }
                 const note = $('shootComment').value.trim() || 'Standard session';
-                cart.push({ id: Date.now(), title, category: `${type} shoot`, details: `${type} | Notes: ${note}`, qty: 1, price: amount });
+                cart.push({ id: Date.now(), title, category: `${type} shoot`, details: `${type} | Notes: ${note}`, qty: 1, price: amount, locked: false });
                 $('shootComment').value = '';
                 if (isCustom('shootName')) { $('shootCustomName').value = ''; $('shootAmount').value = ''; }
             } else {
@@ -674,7 +829,7 @@
                     cat = `Event (${ev ? ev.category : 'Package'})`;
                 }
                 const note = $('eventComment').value.trim() || (!isCustom('eventSelect') && ev?.details) || 'Event package';
-                cart.push({ id: Date.now(), title, category: cat, details: note, qty: 1, price: amount });
+                cart.push({ id: Date.now(), title, category: cat, details: note, qty: 1, price: amount, locked: false });
                 $('eventComment').value = '';
                 if (isCustom('eventSelect')) { $('eventCustomName').value = ''; $('eventAmount').value = ''; }
             }
@@ -688,67 +843,105 @@
                     <td class="px-4 py-3 text-xs text-slate-600">${esc(r.details)}</td>
                     <td class="px-4 py-3 text-center">${r.qty}</td>
                     <td class="px-4 py-3 text-right font-bold">${fmt(r.qty * r.price)}</td>
-                    <td class="px-4 py-3 text-center"><button onclick="removeItem(${r.id})" class="text-rose-500 text-xs hover:underline">Remove</button></td>
+                    <td class="px-4 py-3 text-center whitespace-nowrap space-x-3">
+                        <button onclick="openEditItem(${r.id})" class="text-blue-600 text-xs font-semibold hover:underline">Edit</button>
+                        <button onclick="removeItem(${r.id})" class="text-rose-500 text-xs hover:underline">Remove</button>
+                    </td>
                 </tr>`).join('')
                 : '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">No items yet. Pick a frame, product, passport, shoot or event above and choose Add to bill.</td></tr>';
             updateTotals();
         }
         function removeItem(id) { cart = cart.filter(i => i.id !== id); renderCart(); }
 
+        function openEditItem(id) {
+            const r = cart.find(i => i.id === id); if (!r) return;
+            $('editCartId').value = id;
+            $('editCartTitle').value = r.title;
+            $('editCartDetails').value = r.details;
+            $('editCartQty').value = r.qty;
+            $('editCartPrice').value = r.price;
+            $('editCartPrice').readOnly = !!r.locked;
+            $('editCartPrice').classList.toggle('bg-slate-100', !!r.locked);
+            $('editCartHint').classList.toggle('hidden', !r.locked);
+            openModal('editItemModal');
+        }
+        function closeEditItem() { closeModal('editItemModal'); }
+        function saveCartEdit(e) {
+            e.preventDefault();
+            const r = cart.find(i => i.id === Number($('editCartId').value)); if (!r) return closeEditItem();
+            const title = $('editCartTitle').value.trim();
+            const qty = Math.floor(Number($('editCartQty').value));
+            const price = Number($('editCartPrice').value);
+            if (!title) return toast('Item name is required.', 'error');
+            if (!(qty >= 1)) return toast('Quantity must be at least 1.', 'error');
+            if (!(price >= 0)) return toast('Enter a valid price.', 'error');
+            r.title = title; r.details = $('editCartDetails').value.trim(); r.qty = qty;
+            if (!r.locked) r.price = price;
+            closeEditItem();
+            renderCart();
+        }
+
         function getTotals() {
             const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
             const discount = Math.max(0, parseFloat($('billDiscount').value) || 0);
-            return { subtotal, discount, total: Math.max(0, subtotal - discount) };
+            const total = Math.max(0, subtotal - discount);
+            const advance = Math.max(0, parseFloat($('billAdvance').value) || 0);
+            const hasAdvance = advance > 0;
+            return { subtotal, discount, total, advance, hasAdvance, balance: Math.max(0, total - advance), payNow: hasAdvance ? advance : total };
         }
         function updateTotals() {
             const t = getTotals();
             $('subtotalLabel').textContent = fmt(t.subtotal);
             $('totalLabel').textContent = fmt(t.total);
+            $('balanceRow').classList.toggle('hidden', !t.hasAdvance);
+            $('balanceLabel').textContent = fmt(t.balance);
+            $('checkoutBtn').textContent = t.hasAdvance ? 'Take advance payment' : 'Choose payment mode';
         }
 
         /* ---------- checkout ---------- */
         function openCheckout() {
             if (!cart.length) return toast('Add at least one item first.', 'error');
+            if (!branch) return openBranchPick();
             const name = $('clientName').value.trim(), phone = $('clientPhone').value.trim();
             if (!name || !phone) return toast('Client name and mobile number are required.', 'error');
-            if (!parseDMY($('billDate').value)) return toast('Enter the date as DD-MM-YYYY.', 'error');
+            if (!parseDMY($('billDate').value)) return toast('Enter the date as DD/MM/YYYY.', 'error');
             const t = getTotals();
             if (t.discount > t.subtotal) return toast('Discount cannot be more than the subtotal.', 'error');
-            $('modalTotal').textContent = fmt(t.total);
+            if (t.hasAdvance && t.advance >= t.total) return toast('Advance must be less than the net payable. For a full payment, set the advance to 0.', 'error');
+            $('modalPayLabel').textContent = t.hasAdvance ? 'Customer pays now (advance)' : 'Customer pays';
+            $('modalTotal').textContent = fmt(t.payNow);
             $('modalCustomer').textContent = `${name} (${phone})`;
             $('modalBranch').textContent = branch;
+            $('modalBalance').textContent = t.hasAdvance ? `Balance ${fmt(t.balance)} to be paid later` : '';
+            $('finishBtn').textContent = t.hasAdvance ? 'Save advance and print receipt' : 'Save bill and print invoice';
             selectPay('Cash');
-            $('paymentModal').classList.remove('hidden');
-            $('paymentModal').classList.add('flex');
+            openModal('paymentModal');
         }
-        function closeCheckout() {
-            $('paymentModal').classList.add('hidden');
-            $('paymentModal').classList.remove('flex');
-        }
+        function closeCheckout() { closeModal('paymentModal'); }
         function selectPay(mode) {
             payMode = mode;
             ['Cash', 'GPay', 'Mixed'].forEach(m => {
                 $('pay-btn-' + m).className = 'pay-btn rounded-xl py-3 px-2 text-center font-bold text-xs flex flex-col items-center gap-1 ' +
                     (m === mode ? 'border-2 border-slate-900 bg-amber-50 text-slate-900' : 'border border-slate-200 text-slate-700 hover:bg-slate-50');
             });
-            const { total } = getTotals();
+            const { payNow } = getTotals();
             $('mixedBox').classList.toggle('hidden', mode !== 'Mixed');
             if (mode === 'Mixed') {
-                const half = Math.round(total / 2);
+                const half = Math.round(payNow / 2);
                 $('mixCash').value = half;
-                $('mixGpay').value = (total - half).toFixed(2);
+                $('mixGpay').value = (payNow - half).toFixed(2);
             }
         }
         function syncMixed(changed) {
-            const { total } = getTotals();
-            if (changed === 'cash') $('mixGpay').value = Math.max(0, total - (parseFloat($('mixCash').value) || 0)).toFixed(2);
-            else $('mixCash').value = Math.max(0, total - (parseFloat($('mixGpay').value) || 0)).toFixed(2);
+            const { payNow } = getTotals();
+            if (changed === 'cash') $('mixGpay').value = Math.max(0, payNow - (parseFloat($('mixCash').value) || 0)).toFixed(2);
+            else $('mixCash').value = Math.max(0, payNow - (parseFloat($('mixGpay').value) || 0)).toFixed(2);
         }
 
         async function finalizeBill() {
             const t = getTotals();
             const isoDate = parseDMY($('billDate').value);
-            if (!isoDate) return toast('Enter the date as DD-MM-YYYY.', 'error');
+            if (!isoDate) return toast('Enter the date as DD/MM/YYYY.', 'error');
             const body = {
                 clientName: $('clientName').value.trim(),
                 clientPhone: $('clientPhone').value.trim(),
@@ -756,14 +949,15 @@
                 date: isoDate,
                 branch,
                 discount: t.discount,
+                advance: t.advance,
                 paymentMode: payMode,
                 items: cart.map(({ title, category, details, qty, price }) => ({ title, category, details, qty, price }))
             };
             if (payMode === 'Mixed') {
                 body.cashAmount = parseFloat($('mixCash').value) || 0;
                 body.gpayAmount = parseFloat($('mixGpay').value) || 0;
-                if (Math.abs(body.cashAmount + body.gpayAmount - t.total) > 0.01) {
-                    return toast(`Cash and GPay must add up to ${fmt(t.total)}.`, 'error');
+                if (Math.abs(body.cashAmount + body.gpayAmount - t.payNow) > 0.01) {
+                    return toast(`Cash and GPay must add up to ${fmt(t.payNow)}.`, 'error');
                 }
             }
             $('finishBtn').disabled = true;
@@ -780,31 +974,47 @@
             cart = [];
             ['clientName', 'clientPhone', 'clientAddress'].forEach(id => $(id).value = '');
             $('billDiscount').value = '0';
+            $('billAdvance').value = '0';
             $('billDate').value = fmtDate(todayLocal());
             renderCart();
             refreshBillNo();
             loadMyBills();
+            loadAdvances();
 
-            $('doneInfo').textContent = `${lastBill.billNo} (${lastBill.branch}) for ${lastBill.client.name}: ${fmt(lastBill.total)}`;
-            printBill(lastBill);
-            $('doneModal').classList.remove('hidden');
-            $('doneModal').classList.add('flex');
+            showDone(lastBill);
         }
-        function closeDone() {
-            $('doneModal').classList.add('hidden');
-            $('doneModal').classList.remove('flex');
+
+        function showDone(b) {
+            const pending = b.status === 'Advance';
+            $('doneTitle').textContent = pending ? 'Advance saved' : (b.advance > 0 ? 'Payment completed' : 'Bill saved');
+            $('doneInfo').textContent = pending
+                ? `${b.billNo} (${b.branch}) for ${b.client.name}: advance ${fmt(b.advance)}, balance ${fmt(b.total - b.advance)}`
+                : `${b.billNo} (${b.branch}) for ${b.client.name}: ${fmt(b.total)}`;
+            printBill(b);
+            openModal('doneModal');
         }
+        function closeDone() { closeModal('doneModal'); }
 
         /* ---------- invoice, print, whatsapp ---------- */
-        const payLabel = b => b.paymentMode === 'Mixed'
-            ? `Mixed (Cash: ₹${b.cashAmount} + GPay: ₹${b.gpayAmount})` : b.paymentMode;
+        const modeText = (m, c, g) => m === 'Mixed' ? `Mixed (Cash: ₹${c} + GPay: ₹${g})` : (m || '-');
+        function payLabel(b) {
+            if (b.status === 'Advance') return `Advance via ${modeText(b.advanceMode || b.paymentMode, b.advanceCash, b.advanceGpay)}`;
+            if ((b.advance || 0) > 0) return `Advance: ${modeText(b.advanceMode, b.advanceCash, b.advanceGpay)} | Balance: ${modeText(b.balanceMode, b.balanceCash, b.balanceGpay)}`;
+            return modeText(b.paymentMode, b.cashAmount, b.gpayAmount);
+        }
 
         function fillInvoice(b) {
+            const pending = b.status === 'Advance';
+            const adv = b.advance || 0;
+            $('pdfDocType').textContent = pending ? 'Advance Receipt' : 'Tax Invoice';
             $('pdfBillNo').textContent = `Bill No: ${b.billNo}`;
             $('pdfBillDate').textContent = `Date: ${fmtDate(b.date)}`;
+            const showOrder = b.orderDate && b.orderDate !== b.date;
+            $('pdfOrderDate').classList.toggle('hidden', !showOrder);
+            if (showOrder) $('pdfOrderDate').textContent = `Order date: ${fmtDate(b.orderDate)}`;
             $('pdfBillerName').textContent = b.billerUsername || b.billerName;
-            $('pdfEmployeeId').textContent = b.billerEmpId;
-            $('pdfBranch').textContent = b.branch || 'Branch 1';
+            $('pdfEmployeeName').textContent = b.billerName || b.billerUsername;
+            $('pdfBranch').textContent = branchShort(b.branch);
             $('pdfClientName').textContent = b.client.name;
             $('pdfClientPhone').textContent = b.client.phone;
             $('pdfClientAddress').textContent = b.client.address || '-';
@@ -822,23 +1032,44 @@
             $('pdfSubtotal').textContent = fmt(b.subtotal);
             $('pdfDiscount').textContent = '- ' + fmt(b.discount);
             $('pdfGrandTotal').textContent = fmt(b.total);
+            $('pdfAdvRows').classList.toggle('hidden', !(adv > 0));
+            if (adv > 0) {
+                $('pdfAdvance').textContent = fmt(adv);
+                $('pdfBalanceLabel').textContent = pending ? 'Balance due:' : 'Balance paid:';
+                $('pdfBalance').textContent = fmt(b.total - adv);
+            }
+            $('pdfTagline').textContent = SHOP.tagline;
+            $('pdfShopPhone').textContent = `Phone: ${SHOP.phone}`;
+            $('pdfShopAddress').textContent = SHOP.address ? `Address: ${SHOP.address}` : '';
+            $('pdfShopAddress').classList.toggle('hidden', !SHOP.address);
+            $('pdfShopEmail').textContent = `Email: ${SHOP.email}`;
         }
-        function printBill(b) { if (!b) return; fillInvoice(b); window.print(); }
+        function printBill(b) {
+            if (!b) return;
+            fillInvoice(b);
+            // the bill number becomes the suggested PDF file name
+            const oldTitle = document.title;
+            document.title = b.billNo;
+            window.addEventListener('afterprint', () => { document.title = oldTitle; }, { once: true });
+            window.print();
+        }
 
         function sendWhatsApp(b) {
             if (!b) return;
+            const pending = b.status === 'Advance';
+            const adv = b.advance || 0;
             const rs = n => '₹' + Number(n || 0).toFixed(2);
             const pad = n => '\u2003'.repeat(n);          // em-spaces keep the centering in WhatsApp
             const line = '----------------------------------';
             const items = b.items.map((i, idx) => `${idx + 1}. *${i.title}* (${i.details}) - ${rs(i.qty * i.price)}`).join('\n');
             const text = [
                 `${pad(4)}*VR PHOTOGRAPHY*`,
-                `${pad(6)}*INVOICE*`,
+                `${pad(pending ? 4 : 6)}*${pending ? 'ADVANCE RECEIPT' : 'INVOICE'}*`,
                 line,
                 `*Bill No:* ${b.billNo}`,
                 `*Date:* ${fmtDate(b.date)}`,
                 `*Branch:* ${b.branch || 'Branch 1'}`,
-                `*Biller:* ${b.billerUsername} (${b.billerEmpId})`,
+                `*Biller:* ${b.billerName || b.billerUsername}`,
                 `*Customer:* ${b.client.name}`,
                 `*Mobile:* ${b.client.phone}`,
                 ...(b.client.address ? [`*Address:* ${b.client.address}`] : []),
@@ -849,8 +1080,10 @@
                 `*Subtotal:* ${rs(b.subtotal)}`,
                 `*Discount:* ${rs(b.discount)}`,
                 `*Grand Total:* *${rs(b.total)}*`,
+                ...(adv > 0 ? [`*Advance Paid:* ${rs(adv)}`, `*Balance ${pending ? 'Due' : 'Paid'}:* ${rs(b.total - adv)}`] : []),
                 `*Payment Mode:* ${payLabel(b)}`,
                 line,
+                `*Shop Mobile:* ${SHOP.phone}`,
                 `${pad(2)}Thank you for choosing`,
                 `${pad(4)}VR Photography !`
             ].join('\n');
@@ -862,7 +1095,90 @@
             window.open(url, '_blank');
         }
 
-        /* ---------- my bills ---------- */
+        /* ---------- advance orders ---------- */
+        let advTimer;
+        const debouncedAdv = () => { clearTimeout(advTimer); advTimer = setTimeout(loadAdvances, 250); };
+
+        async function loadAdvances() {
+            try {
+                const q = encodeURIComponent($('advSearch').value.trim());
+                advances = await api(`/advances${q ? '?search=' + q : ''}`);
+            } catch (e) { return; }
+            const due = advances.reduce((s, b) => s + (b.total - b.advance), 0);
+            $('advSummary').textContent = advances.length
+                ? `${advances.length} waiting for balance. Total balance due ${fmt(due)}. Paid orders move to sales.`
+                : 'Orders with an advance wait here until the balance is paid.';
+            $('advBody').innerHTML = advances.length ? advances.map((b, i) => `
+                <tr>
+                    <td class="px-4 py-3 font-semibold text-blue-600 whitespace-nowrap">${esc(b.billNo)}</td>
+                    <td class="px-4 py-3 text-slate-500 whitespace-nowrap">${esc(fmtDate(b.orderDate || b.date))}</td>
+                    <td class="px-4 py-3 text-xs"><span class="px-2 py-0.5 rounded bg-slate-100 font-semibold">${esc(branchShort(b.branch))}</span></td>
+                    <td class="px-4 py-3">${esc(b.client.name)} <span class="text-xs text-slate-400">(${esc(b.client.phone)})</span></td>
+                    <td class="px-4 py-3 text-right">${fmt(b.total)}</td>
+                    <td class="px-4 py-3 text-xs"><span class="font-bold text-slate-800">${fmt(b.advance)}</span> <span class="text-slate-500">${esc(modeText(b.advanceMode || b.paymentMode, b.advanceCash, b.advanceGpay))}</span></td>
+                    <td class="px-4 py-3 text-right font-bold text-rose-600">${fmt(b.total - b.advance)}</td>
+                    <td class="px-4 py-3 text-right space-x-3 whitespace-nowrap">
+                        <button onclick="openComplete(${i})" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Pay completely</button>
+                        <button onclick="printBill(advances[${i}])" class="text-blue-600 hover:underline text-xs font-semibold">Print</button>
+                        <button onclick="sendWhatsApp(advances[${i}])" class="text-emerald-600 hover:underline text-xs font-semibold">WhatsApp</button>
+                    </td>
+                </tr>`).join('')
+                : '<tr><td colspan="8" class="px-4 py-8 text-center text-slate-400">No advance orders waiting.</td></tr>';
+        }
+
+        function openComplete(i) {
+            completing = advances[i]; if (!completing) return;
+            const bal = completing.total - completing.advance;
+            $('cmpCustomer').textContent = `${completing.client.name} (${completing.client.phone})`;
+            $('cmpInfo').textContent = `${completing.billNo} | Total ${fmt(completing.total)} | Advance ${fmt(completing.advance)}`;
+            $('cmpBalance').textContent = fmt(bal);
+            selectCmpPay('Cash');
+            openModal('completeModal');
+        }
+        function closeComplete() { closeModal('completeModal'); completing = null; }
+        function selectCmpPay(mode) {
+            cmpMode = mode;
+            ['Cash', 'GPay', 'Mixed'].forEach(m => {
+                $('cmp-btn-' + m).className = 'rounded-xl py-3 px-2 text-center font-bold text-xs flex flex-col items-center gap-1 ' +
+                    (m === mode ? 'border-2 border-slate-900 bg-amber-50 text-slate-900' : 'border border-slate-200 text-slate-700 hover:bg-slate-50');
+            });
+            $('cmpMixedBox').classList.toggle('hidden', mode !== 'Mixed');
+            if (mode === 'Mixed' && completing) {
+                const bal = completing.total - completing.advance, half = Math.round(bal / 2);
+                $('cmpMixCash').value = half;
+                $('cmpMixGpay').value = (bal - half).toFixed(2);
+            }
+        }
+        function syncCmpMixed(changed) {
+            const bal = completing ? completing.total - completing.advance : 0;
+            if (changed === 'cash') $('cmpMixGpay').value = Math.max(0, bal - (parseFloat($('cmpMixCash').value) || 0)).toFixed(2);
+            else $('cmpMixCash').value = Math.max(0, bal - (parseFloat($('cmpMixGpay').value) || 0)).toFixed(2);
+        }
+        async function finalizeComplete() {
+            if (!completing) return;
+            const bal = completing.total - completing.advance;
+            const body = { paymentMode: cmpMode };
+            if (cmpMode === 'Mixed') {
+                body.cashAmount = parseFloat($('cmpMixCash').value) || 0;
+                body.gpayAmount = parseFloat($('cmpMixGpay').value) || 0;
+                if (Math.abs(body.cashAmount + body.gpayAmount - bal) > 0.01) return toast(`Cash and GPay must add up to ${fmt(bal)}.`, 'error');
+            }
+            $('cmpFinishBtn').disabled = true;
+            try {
+                lastBill = await api(`/bills/${completing.id}/complete`, { method: 'POST', body });
+            } catch (err) {
+                $('cmpFinishBtn').disabled = false;
+                loadAdvances();
+                return toast(err.message, 'error');
+            }
+            $('cmpFinishBtn').disabled = false;
+            closeComplete();
+            loadAdvances();
+            loadMyBills();
+            showDone(lastBill);
+        }
+
+        /* ---------- my bills (completed sales only) ---------- */
         async function loadMyBills() {
             try {
                 const q = encodeURIComponent($('myBillSearch').value.trim());
@@ -872,7 +1188,7 @@
                 <tr>
                     <td class="px-4 py-3 font-semibold text-blue-600">${esc(b.billNo)}</td>
                     <td class="px-4 py-3 text-slate-500">${esc(fmtDate(b.date))}</td>
-                    <td class="px-4 py-3 text-xs"><span class="px-2 py-0.5 rounded bg-slate-100 font-semibold">${esc(b.branch || 'Branch 1')}</span></td>
+                    <td class="px-4 py-3 text-xs"><span class="px-2 py-0.5 rounded bg-slate-100 font-semibold">${esc(branchShort(b.branch))}</span></td>
                     <td class="px-4 py-3">${esc(b.client.name)} <span class="text-xs text-slate-400">(${esc(b.client.phone)})</span></td>
                     <td class="px-4 py-3 text-xs">${esc(payLabel(b))}</td>
                     <td class="px-4 py-3 text-right font-bold">${fmt(b.total)}</td>
