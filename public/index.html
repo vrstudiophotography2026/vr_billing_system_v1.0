@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VR Photography | Studio Management Portal</title>
+    <title>VR Photography | Billing Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <style>
@@ -21,7 +21,7 @@
         <div class="absolute top-1/2 -right-40 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
     </div>
 
-    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2"></div>
+    <div id="toast-container" class="fixed top-5 right-5 z-[70] flex flex-col gap-2"></div>
 
     <header class="relative z-10 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md px-6 sm:px-8 py-4 flex items-center justify-between">
         <div class="flex items-center gap-3">
@@ -38,7 +38,7 @@
         </div>
         <div class="text-xs text-slate-400 hidden sm:flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-            Studio POS v5.0
+            Billing POS v6.0
         </div>
     </header>
 
@@ -52,18 +52,18 @@
                         Capturing moments, simplifying billing.
                     </h1>
                     <p class="text-slate-400 text-sm mt-3 leading-relaxed">
-                        Bill frames, albums, passport photos, indoor and outdoor shoots and event coverage across two branches. Take Cash, GPay or split payments, then print the invoice and send it on WhatsApp.
+                        Bill frames, albums, passport photos, indoor and outdoor shoots and event coverage across two branches. Take Cash, GPay or split payments, keep advance orders, then print the invoice and send it on WhatsApp.
                     </p>
                 </div>
 
                 <ul class="space-y-3 my-8 text-xs text-slate-300">
-                    <li class="bg-slate-800/60 p-3 rounded-lg border border-slate-700/50">Employees pick their name to start billing. Only the admin needs a password</li>
-                    <li class="bg-slate-800/60 p-3 rounded-lg border border-slate-700/50">Every invoice carries the biller's name, employee ID and branch</li>
-                    <li class="bg-slate-800/60 p-3 rounded-lg border border-slate-700/50">All bills and prices are saved in the studio database</li>
+                    <li class="bg-slate-800/60 p-3 rounded-lg border border-slate-700/50">Employees pick their name and branch to start billing. Only the admin needs a password</li>
+                    <li class="bg-slate-800/60 p-3 rounded-lg border border-slate-700/50">Every invoice carries the biller's name and branch</li>
+                    <li class="bg-slate-800/60 p-3 rounded-lg border border-slate-700/50">All bills, advances, expenditure and prices are saved in the database</li>
                 </ul>
 
                 <div class="text-xs text-slate-500 flex items-center justify-between pt-4 border-t border-slate-800">
-                    <span>VR Photography Studio</span>
+                    <span>VR Photography</span>
                     <span>Authorized access only</span>
                 </div>
             </div>
@@ -87,7 +87,7 @@
                         <select id="empSelect" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
                             <option value="" disabled selected>Loading...</option>
                         </select>
-                        <p id="empHelp" class="text-[11px] text-slate-500 mt-2">Your employee ID is added to every invoice you create.</p>
+                        <p id="empHelp" class="text-[11px] text-slate-500 mt-2">You will choose your branch in the next step.</p>
                     </div>
                     <button type="submit" id="empBtn" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-semibold rounded-xl py-3 text-sm transition-all shadow-lg shadow-amber-500/20 disabled:opacity-60">
                         Open billing counter
@@ -113,10 +113,31 @@
     </main>
 
     <footer class="relative z-10 text-center py-4 text-xs text-slate-600">
-        © 2026 VR Photography Studio. All rights reserved.
+        © 2026 VR Photography. All rights reserved.
     </footer>
 
+    <!-- Branch popup (employees) -->
+    <div id="branchModal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="branchTitle">
+        <div class="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-6 animate-fade">
+            <h3 id="branchTitle" class="font-serif-studio text-2xl font-bold text-white">Which branch are you at?</h3>
+            <p id="branchWho" class="text-xs text-slate-400 mt-1">Every invoice you create will carry this branch.</p>
+            <div class="grid grid-cols-2 gap-3 mt-6">
+                <button type="button" onclick="chooseBranch('Branch 1')" class="rounded-xl border border-slate-700 bg-slate-950 hover:border-amber-400 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 py-5 text-center">
+                    <span class="block text-2xl font-bold text-amber-400">B1</span>
+                    <span class="block text-xs text-slate-300 mt-1">Branch 1</span>
+                </button>
+                <button type="button" onclick="chooseBranch('Branch 2')" class="rounded-xl border border-slate-700 bg-slate-950 hover:border-amber-400 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 py-5 text-center">
+                    <span class="block text-2xl font-bold text-amber-400">B2</span>
+                    <span class="block text-xs text-slate-300 mt-1">Branch 2</span>
+                </button>
+            </div>
+            <button type="button" onclick="cancelBranch()" class="w-full mt-4 text-xs text-slate-400 hover:text-white py-1">Back</button>
+        </div>
+    </div>
+
     <script>
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
         function showToast(msg, type = 'error') {
             const container = document.getElementById('toast-container');
             const el = document.createElement('div');
@@ -171,23 +192,44 @@
                     return;
                 }
                 select.innerHTML = '<option value="" disabled selected>Choose your name...</option>' +
-                    list.map(e => `<option value="${e.username}">${e.name} (${e.empId})</option>`).join('');
+                    list.map(e => `<option value="${esc(e.username)}">${esc(e.name)}</option>`).join('');
             } catch (err) {
                 select.innerHTML = '<option value="" disabled selected>Could not load employees</option>';
             }
         }
 
+        /* ---------- employee: sign in, then pick the branch ---------- */
         async function handleEmployeeLogin(e) {
             e.preventDefault();
             try {
-                await login('/api/auth/employee', {
+                const user = await login('/api/auth/employee', {
                     username: document.getElementById('empSelect').value
                 }, document.getElementById('empBtn'));
-                window.location.href = 'employee.html';
+                document.getElementById('branchWho').textContent = `Hi ${user.name}. Every invoice you create will carry this branch.`;
+                openBranchModal();
             } catch (err) {
                 showToast(err.message);
             }
         }
+        function openBranchModal() {
+            const m = document.getElementById('branchModal');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+            m.querySelector('button').focus();
+        }
+        function chooseBranch(b) {
+            sessionStorage.setItem('vr_branch', b);
+            window.location.href = 'employee.html';
+        }
+        function cancelBranch() {
+            sessionStorage.clear();        // go back and sign in again
+            const m = document.getElementById('branchModal');
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        }
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && !document.getElementById('branchModal').classList.contains('hidden')) cancelBranch();
+        });
 
         async function handleAdminLogin(e) {
             e.preventDefault();
