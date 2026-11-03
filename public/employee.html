@@ -295,7 +295,7 @@
                     <h3 class="font-bold text-sm text-slate-800">Advance orders</h3>
                     <p id="advSummary" class="text-xs text-slate-500"></p>
                 </div>
-                <input type="search" id="advSearch" oninput="debouncedAdv()" placeholder="Search bill no, name or phone" class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-60">
+                <input type="search" id="advSearch" oninput="debouncedAdv()" placeholder="Search bill no, name, phone or product" class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-64">
             </div>
             <table class="w-full text-left border-collapse text-sm">
                 <thead>
@@ -304,6 +304,7 @@
                         <th class="px-4 py-3 border-b">Order date</th>
                         <th class="px-4 py-3 border-b">Branch</th>
                         <th class="px-4 py-3 border-b">Customer</th>
+                        <th class="px-4 py-3 border-b">Products</th>
                         <th class="px-4 py-3 border-b text-right">Total</th>
                         <th class="px-4 py-3 border-b">Advance paid (how)</th>
                         <th class="px-4 py-3 border-b text-right">Balance</th>
@@ -318,7 +319,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
             <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                 <h3 class="font-bold text-sm text-slate-800">My recent bills</h3>
-                <input type="search" id="myBillSearch" oninput="loadMyBills()" placeholder="Search bill no, name or phone" class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-60">
+                <input type="search" id="myBillSearch" oninput="loadMyBills()" placeholder="Search bill no, name, phone or product" class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-64">
             </div>
             <table class="w-full text-left border-collapse text-sm">
                 <thead>
@@ -327,6 +328,7 @@
                         <th class="px-4 py-3 border-b">Date</th>
                         <th class="px-4 py-3 border-b">Branch</th>
                         <th class="px-4 py-3 border-b">Customer</th>
+                        <th class="px-4 py-3 border-b">Products</th>
                         <th class="px-4 py-3 border-b">Payment</th>
                         <th class="px-4 py-3 border-b text-right">Total</th>
                         <th class="px-4 py-3 border-b text-right">Actions</th>
@@ -565,6 +567,11 @@
         const todayLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
         const customOpt = `<option value="${CUSTOM}">Other (type manually)</option>`;
         const branchShort = b => 'B' + ((String(b || '').match(/\d+/) || ['1'])[0]);
+
+        // Product names on a bill, e.g. "Classic frame × 2, Passport 6 photos"
+        const itemsText = b => (b.items || [])
+            .map(i => `${i.title}${i.qty > 1 ? ' × ' + i.qty : ''}`)
+            .join(', ') || '-';
 
         /* ---------- dates: always shown as DD/MM/YYYY ---------- */
         const fmtDate = iso => /^\d{4}-\d{2}-\d{2}/.test(iso || '') ? iso.slice(0, 10).split('-').reverse().join('/') : (iso || '');
@@ -1114,6 +1121,7 @@
                     <td class="px-4 py-3 text-slate-500 whitespace-nowrap">${esc(fmtDate(b.orderDate || b.date))}</td>
                     <td class="px-4 py-3 text-xs"><span class="px-2 py-0.5 rounded bg-slate-100 font-semibold">${esc(branchShort(b.branch))}</span></td>
                     <td class="px-4 py-3">${esc(b.client.name)} <span class="text-xs text-slate-400">(${esc(b.client.phone)})</span></td>
+                    <td class="px-4 py-3 text-xs text-slate-600 min-w-[200px]">${esc(itemsText(b))}</td>
                     <td class="px-4 py-3 text-right">${fmt(b.total)}</td>
                     <td class="px-4 py-3 text-xs"><span class="font-bold text-slate-800">${fmt(b.advance)}</span> <span class="text-slate-500">${esc(modeText(b.advanceMode || b.paymentMode, b.advanceCash, b.advanceGpay))}</span></td>
                     <td class="px-4 py-3 text-right font-bold text-rose-600">${fmt(b.total - b.advance)}</td>
@@ -1123,7 +1131,7 @@
                         <button onclick="sendWhatsApp(advances[${i}])" class="text-emerald-600 hover:underline text-xs font-semibold">WhatsApp</button>
                     </td>
                 </tr>`).join('')
-                : '<tr><td colspan="8" class="px-4 py-8 text-center text-slate-400">No advance orders waiting.</td></tr>';
+                : '<tr><td colspan="9" class="px-4 py-8 text-center text-slate-400">No advance orders waiting.</td></tr>';
         }
 
         function openComplete(i) {
@@ -1190,6 +1198,7 @@
                     <td class="px-4 py-3 text-slate-500">${esc(fmtDate(b.date))}</td>
                     <td class="px-4 py-3 text-xs"><span class="px-2 py-0.5 rounded bg-slate-100 font-semibold">${esc(branchShort(b.branch))}</span></td>
                     <td class="px-4 py-3">${esc(b.client.name)} <span class="text-xs text-slate-400">(${esc(b.client.phone)})</span></td>
+                    <td class="px-4 py-3 text-xs text-slate-600 min-w-[200px]">${esc(itemsText(b))}</td>
                     <td class="px-4 py-3 text-xs">${esc(payLabel(b))}</td>
                     <td class="px-4 py-3 text-right font-bold">${fmt(b.total)}</td>
                     <td class="px-4 py-3 text-right space-x-3 whitespace-nowrap">
@@ -1197,7 +1206,7 @@
                         <button onclick="sendWhatsApp(myBills[${i}])" class="text-emerald-600 hover:underline text-xs font-semibold">WhatsApp</button>
                     </td>
                 </tr>`).join('')
-                : '<tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">No bills yet.</td></tr>';
+                : '<tr><td colspan="8" class="px-4 py-8 text-center text-slate-400">No bills yet.</td></tr>';
         }
     </script>
 </body>
