@@ -343,12 +343,12 @@
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
                     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
                         <span class="font-bold text-sm text-slate-800">Pending advance orders</span>
-                        <input type="search" id="advSearch" oninput="debouncedAdv()" placeholder="Search bill no, name or phone" class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-60">
+                        <input type="search" id="advSearch" oninput="debouncedAdv()" placeholder="Search bill no, name, phone or product" class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-64">
                     </div>
                     <table class="w-full text-left border-collapse text-sm">
                         <thead><tr class="bg-slate-50 text-slate-500 text-xs">
                             <th class="px-4 py-3 border-b">Bill no</th><th class="px-4 py-3 border-b">Order date</th><th class="px-4 py-3 border-b">Branch</th>
-                            <th class="px-4 py-3 border-b">Customer</th><th class="px-4 py-3 border-b">Taken by</th><th class="px-4 py-3 border-b text-right">Total</th>
+                            <th class="px-4 py-3 border-b">Customer</th><th class="px-4 py-3 border-b">Products</th><th class="px-4 py-3 border-b">Taken by</th><th class="px-4 py-3 border-b text-right">Total</th>
                             <th class="px-4 py-3 border-b">Advance paid (how)</th><th class="px-4 py-3 border-b text-right">Balance</th><th class="px-4 py-3 border-b text-right">Actions</th>
                         </tr></thead>
                         <tbody id="advBody" class="divide-y divide-slate-100"></tbody>
@@ -634,7 +634,7 @@
                     <div class="px-6 py-4 border-b border-slate-100 flex flex-wrap items-end gap-3">
                         <div class="flex-1 min-w-[200px]">
                             <label for="filterSearch" class="block text-xs font-semibold text-slate-600 mb-1">Search</label>
-                            <input type="search" id="filterSearch" placeholder="Bill no, customer name or phone" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                            <input type="search" id="filterSearch" placeholder="Bill no, customer, phone or product" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
                         </div>
                         <div>
                             <label for="filterBranch" class="block text-xs font-semibold text-slate-600 mb-1">Branch</label>
@@ -697,7 +697,7 @@
                         <table class="w-full text-left border-collapse text-sm">
                             <thead><tr class="bg-slate-50 text-slate-500 text-xs">
                                 <th class="px-6 py-3 border-b">Bill no</th><th class="px-6 py-3 border-b">Date</th><th class="px-6 py-3 border-b">Branch</th>
-                                <th class="px-6 py-3 border-b">Customer</th><th class="px-6 py-3 border-b">Biller (ID)</th><th class="px-6 py-3 border-b">Payment</th>
+                                <th class="px-6 py-3 border-b">Customer</th><th class="px-6 py-3 border-b">Products</th><th class="px-6 py-3 border-b">Biller (ID)</th><th class="px-6 py-3 border-b">Payment</th>
                                 <th class="px-6 py-3 border-b text-right">Total</th><th class="px-6 py-3 border-b text-right">Actions</th>
                             </tr></thead>
                             <tbody id="invoiceBody" class="divide-y divide-slate-100"></tbody>
@@ -1035,6 +1035,11 @@
         const branchShort = b => 'B' + ((String(b || '').match(/\d+/) || ['1'])[0]);
         const openModal = id => { $(id).classList.remove('hidden'); $(id).classList.add('flex'); };
         const closeModal = id => { $(id).classList.add('hidden'); $(id).classList.remove('flex'); };
+
+        // Product names on a bill, e.g. "Classic frame × 2, Passport 6 photos"
+        const itemsText = b => (b.items || [])
+            .map(i => `${i.title}${i.qty > 1 ? ' × ' + i.qty : ''}`)
+            .join(', ') || '-';
 
         /* ---------- dates: always shown as DD/MM/YYYY ---------- */
         const fmtDate = iso => /^\d{4}-\d{2}-\d{2}/.test(iso || '') ? iso.slice(0, 10).split('-').reverse().join('/') : (iso || '');
@@ -1592,6 +1597,7 @@
                     <td class="px-4 py-3 text-slate-500 whitespace-nowrap">${esc(fmtDate(b.orderDate || b.date))}</td>
                     <td class="px-4 py-3 text-xs"><span class="px-2 py-0.5 rounded bg-slate-100 font-semibold">${esc(branchShort(b.branch))}</span></td>
                     <td class="px-4 py-3">${esc(b.client.name)} <span class="text-xs text-slate-400">(${esc(b.client.phone)})</span></td>
+                    <td class="px-4 py-3 text-xs text-slate-600 min-w-[200px]">${esc(itemsText(b))}</td>
                     <td class="px-4 py-3 text-xs text-slate-600">${esc(b.billerUsername)}</td>
                     <td class="px-4 py-3 text-right">${fmt(b.total)}</td>
                     <td class="px-4 py-3 text-xs"><span class="font-bold text-slate-800">${fmt(b.advance)}</span> <span class="text-slate-500">${esc(modeText(b.advanceMode || b.paymentMode, b.advanceCash, b.advanceGpay))}</span></td>
@@ -1603,7 +1609,7 @@
                         <button onclick="deleteAdvance('${b.id}', '${esc(b.billNo)}')" class="text-rose-500 hover:underline text-xs font-semibold">Delete</button>
                     </td>
                 </tr>`).join('')
-                : '<tr><td colspan="9" class="px-4 py-8 text-center text-slate-400">No advance orders waiting.</td></tr>';
+                : '<tr><td colspan="10" class="px-4 py-8 text-center text-slate-400">No advance orders waiting.</td></tr>';
         }
 
         const deleteAdvance = (id, billNo) => run(async () => {
@@ -1997,6 +2003,7 @@
                     <td class="px-6 py-3 text-slate-500">${esc(fmtDate(b.date))}</td>
                     <td class="px-6 py-3"><span class="px-2 py-0.5 text-xs rounded bg-slate-100 font-semibold">${esc(b.branch || 'Branch 1')}</span></td>
                     <td class="px-6 py-3 font-medium text-slate-800">${esc(b.client.name)} <span class="text-xs text-slate-400">(${esc(b.client.phone)})</span></td>
+                    <td class="px-6 py-3 text-xs text-slate-600 min-w-[200px]">${esc(itemsText(b))}</td>
                     <td class="px-6 py-3 text-slate-600 text-xs">${esc(b.billerUsername)} (${esc(b.billerEmpId)})</td>
                     <td class="px-6 py-3"><span class="px-2 py-0.5 text-xs rounded bg-slate-100 font-medium">${esc(payLabel(b))}</span></td>
                     <td class="px-6 py-3 text-right font-bold text-slate-800">${fmt0(b.total)}</td>
@@ -2005,7 +2012,7 @@
                         <button onclick="sendWhatsApp(dashBills[${i}])" class="text-emerald-600 hover:underline text-xs font-semibold">WhatsApp</button>
                     </td>
                 </tr>`).join('')
-                : '<tr><td colspan="8" class="px-6 py-8 text-center text-slate-400">No invoices match. Try clearing the filters.</td></tr>';
+                : '<tr><td colspan="9" class="px-6 py-8 text-center text-slate-400">No invoices match. Try clearing the filters.</td></tr>';
             $('invoiceCount').textContent = `Showing ${dashBills.length} invoice${dashBills.length === 1 ? '' : 's'} (latest first)`;
         }
 
