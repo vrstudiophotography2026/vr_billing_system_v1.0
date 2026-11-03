@@ -87,6 +87,12 @@ function dateRange(query) {
     return r;
 }
 
+// Search across bill number, customer name, phone and product names.
+function searchFilter(term) {
+    const rx = new RegExp(escapeRegex(str(term, 60)), 'i');
+    return [{ billNo: rx }, { 'client.name': rx }, { 'client.phone': rx }, { 'items.title': rx }];
+}
+
 /* ------------------------------------------------------------------ */
 /*  MODELS                                                             */
 /* ------------------------------------------------------------------ */
@@ -490,10 +496,7 @@ app.get('/api/bills', auth(), wrap(async (req, res) => {
     const range = dateRange(req.query);
     if (range) q.date = range;
     if (BRANCHES.includes(branch)) q.branch = branch;
-    if (search) {
-        const rx = new RegExp(escapeRegex(str(search, 60)), 'i');
-        q.$or = [{ billNo: rx }, { 'client.name': rx }, { 'client.phone': rx }];
-    }
+    if (search) q.$or = searchFilter(search);   // bill no, customer, phone or product name
     const limit = Math.min(parseInt(req.query.limit, 10) || 200, 1000);
     res.json(await Bill.find(q).sort({ createdAt: -1 }).limit(limit));
 }));
@@ -501,10 +504,7 @@ app.get('/api/bills', auth(), wrap(async (req, res) => {
 // Advance orders waiting for the balance. Visible to every signed-in user so any counter can take the balance.
 app.get('/api/advances', auth(), wrap(async (req, res) => {
     const q = { status: 'Advance' };
-    if (req.query.search) {
-        const rx = new RegExp(escapeRegex(str(req.query.search, 60)), 'i');
-        q.$or = [{ billNo: rx }, { 'client.name': rx }, { 'client.phone': rx }];
-    }
+    if (req.query.search) q.$or = searchFilter(req.query.search);
     res.json(await Bill.find(q).sort({ createdAt: -1 }).limit(500));
 }));
 
