@@ -537,11 +537,14 @@
                     </div>
                 </div>
             </div>
+            <!-- Footer order: tagline, address, phone, email, website, instagram -->
             <div class="mt-6 pt-4 border-t border-slate-300 text-center text-[11px] text-slate-600 space-y-1">
                 <p id="pdfTagline" class="font-semibold text-slate-700"></p>
-                <p id="pdfShopPhone"></p>
                 <p id="pdfShopAddress"></p>
+                <p id="pdfShopPhone"></p>
                 <p id="pdfShopEmail"></p>
+                <p id="pdfShopWebsite"></p>
+                <p id="pdfShopInsta"></p>
             </div>
         </div>
     </div>
@@ -550,9 +553,11 @@
         /* ---------- shop details printed on every invoice ---------- */
         const SHOP = {
             tagline: 'Custom frames, passport photos, indoor and outdoor shoots, wedding and event coverage',
+            address: '110, Muniyappan Kovil Street, Manickampalayam, Erode – 638004, Tamil Nadu, India.',
             phone: '+91 90254 30044',
             email: 'vrphotography34@gmail.com',
-            address: '110, Muniyappan Kovil Street, Manickampalayam, Erode – 638004, Tamil Nadu, India.'          // <-- type your shop address here, e.g. '12, Main Road, Chennai - 600001'
+            website: 'https://vr-photography.com/',
+            insta: '@vr_photography'
         };
 
         /* ---------- helpers ---------- */
@@ -1044,11 +1049,16 @@
                 $('pdfBalanceLabel').textContent = pending ? 'Balance due:' : 'Balance paid:';
                 $('pdfBalance').textContent = fmt(b.total - adv);
             }
+            // Footer order: tagline, address, phone, email, website, instagram
             $('pdfTagline').textContent = SHOP.tagline;
-            $('pdfShopPhone').textContent = `Phone: ${SHOP.phone}`;
             $('pdfShopAddress').textContent = SHOP.address ? `Address: ${SHOP.address}` : '';
             $('pdfShopAddress').classList.toggle('hidden', !SHOP.address);
+            $('pdfShopPhone').textContent = `Phone: ${SHOP.phone}`;
             $('pdfShopEmail').textContent = `Email: ${SHOP.email}`;
+            $('pdfShopWebsite').textContent = SHOP.website ? `Website: ${SHOP.website}` : '';
+            $('pdfShopWebsite').classList.toggle('hidden', !SHOP.website);
+            $('pdfShopInsta').textContent = SHOP.insta ? `Instagram: ${SHOP.insta}` : '';
+            $('pdfShopInsta').classList.toggle('hidden', !SHOP.insta);
         }
         function printBill(b) {
             if (!b) return;
